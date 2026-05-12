@@ -3,19 +3,19 @@ import { supabase } from '@/lib/supabase'
 import type { Asset } from '@/types'
 import type { AssetFormData } from '@/schemas/asset.schema'
 
-export function useAssets(contractId: string) {
+export function useAssets(contractId: string | undefined) {
   return useQuery({
     queryKey: ['assets', contractId],
     queryFn: async (): Promise<Asset[]> => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('assets')
-        .select('*')
-        .eq('contract_id', contractId)
+        .select('*, contract:contracts(id,title,contract_number)')
         .order('name')
+      if (contractId) query = query.eq('contract_id', contractId)
+      const { data, error } = await query
       if (error) throw error
-      return data ?? []
+      return (data ?? []) as Asset[]
     },
-    enabled: !!contractId,
   })
 }
 

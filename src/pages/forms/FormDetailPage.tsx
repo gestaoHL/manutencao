@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
   ChevronLeft, CheckCircle, XCircle, Clock, Eye,
-  ChevronDown, ChevronUp, User, FileText, StickyNote, Ban
+  ChevronDown, ChevronUp, User, FileText, StickyNote, Ban, ExternalLink
 } from 'lucide-react'
 import { useExecution, useUpdateExecutionStatus } from '@/hooks/useExecutions'
 import { useExecutionHistory } from '@/hooks/useHistory'
@@ -199,6 +199,32 @@ export function FormDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Form link */}
+        {exec.plan?.forms_catalog?.path && (() => {
+          const basePath = import.meta.env.BASE_URL.replace(/\/$/, '')
+          const fp = exec.plan.forms_catalog.path
+          const formUrl = fp.startsWith('/') ? window.location.origin + basePath + fp + '?id=' + exec.id : fp + '?id=' + exec.id
+          return (
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              <p className="text-xs font-bold text-metro-navy uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <FileText size={12} /> Formulário da OS
+              </p>
+              <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5">
+                <ExternalLink size={13} className="text-blue-400 shrink-0" />
+                <span className="flex-1 text-xs text-blue-600 font-mono truncate">{fp}</span>
+                <a
+                  href={formUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 text-xs font-semibold text-blue-700 hover:text-blue-900 underline"
+                >
+                  Abrir
+                </a>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Form data */}
         {Object.keys(exec.form_data).length > 0 && (

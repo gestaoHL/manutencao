@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Wrench, Search, Plus, ChevronRight } from 'lucide-react'
 import { useExecutions } from '@/hooks/useExecutions'
 import { useAuth } from '@/hooks/useAuth'
@@ -24,6 +24,7 @@ interface Props {
 }
 
 export function MaintenanceExecutionsPage({ planType = 'preventiva' }: Props) {
+  const navigate = useNavigate()
   const { data: executions, isLoading } = useExecutions(planType)
   const { profile } = useAuth()
   const canCreateOS = profile?.role === 'admin' || profile?.role === 'gestor'
@@ -119,7 +120,7 @@ export function MaintenanceExecutionsPage({ planType = 'preventiva' }: Props) {
                   <tr
                     key={exec.id}
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => window.location.href = `/forms/${exec.id}`}
+                    onClick={() => navigate(`/forms/${exec.id}`)}
                   >
                     <td className="px-4 py-3">
                       <p className="font-medium text-metro-navy">{exec.plan?.title ?? '—'}</p>

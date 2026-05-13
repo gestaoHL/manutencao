@@ -1,0 +1,15 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      // GitHub Pages SPA redirect
+      var path = window.location.pathname;
+      var repo = '/manutencao';
+      var rest = path.startsWith(repo) ? path.slice(repo.length) : path;
+      sessionStorage.setItem('spa_redirect', rest + window.location.search);
+      window.location.replace(repo + '/');
+    </script>
+  </head>
+  <body></body>
+</html>

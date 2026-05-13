@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
+﻿import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { AppShell } from '@/components/layout/AppShell'
 import { Spinner } from '@/components/ui/Spinner'
@@ -93,4 +93,4 @@ export const router = createBrowserRouter([
     ],
   },
   { path: '*', element: <NotFoundPage /> },
-])
+], { basename: import.meta.env.BASE_URL })

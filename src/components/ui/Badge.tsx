@@ -2,7 +2,7 @@ import { clsx } from 'clsx'
 
 type BadgeVariant = 'active' | 'suspended' | 'expired' | 'terminated' |
                    'pending' | 'approved' | 'rejected' | 'em_analise' |
-                   'pendente' | 'aprovado' | 'rejeitado' | 'default'
+                   'pendente' | 'recebido' | 'aprovado' | 'rejeitado' | 'cancelado' | 'default'
 
 const variantClasses: Record<BadgeVariant, string> = {
   active:      'bg-green-100 text-green-800',
@@ -10,12 +10,14 @@ const variantClasses: Record<BadgeVariant, string> = {
   aprovado:    'bg-green-100 text-green-800',
   pending:     'bg-yellow-100 text-yellow-800',
   pendente:    'bg-yellow-100 text-yellow-800',
+  recebido:    'bg-purple-100 text-purple-800',
   suspended:   'bg-orange-100 text-orange-800',
   em_analise:  'bg-blue-100 text-blue-800',
   expired:     'bg-gray-100 text-gray-600',
   terminated:  'bg-red-100 text-red-700',
   rejected:    'bg-red-100 text-red-700',
   rejeitado:   'bg-red-100 text-red-700',
+  cancelado:   'bg-gray-200 text-gray-500',
   default:     'bg-gray-100 text-gray-600',
 }
 
@@ -25,12 +27,14 @@ const labels: Record<BadgeVariant, string> = {
   aprovado:   'Aprovado',
   pending:    'Pendente',
   pendente:   'Pendente',
+  recebido:   'Recebido',
   suspended:  'Suspenso',
   em_analise: 'Em Análise',
   expired:    'Expirado',
   terminated: 'Encerrado',
   rejected:   'Rejeitado',
   rejeitado:  'Rejeitado',
+  cancelado:  'Cancelado',
   default:    'Desconhecido',
 }
 

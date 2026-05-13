@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cubículo Retificador — Manutenção Anual</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root { --navy:#1A2B4A; --orange:#E8571A; --bg:#F4F6F9; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',sans-serif; background:var(--bg); color:#1e293b; font-size:14px; }
+    header { background:var(--navy); color:white; padding:16px 24px; display:flex; align-items:center; gap:14px; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+    .brand { width:36px; height:36px; border-radius:8px; background:var(--orange); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:18px; }
+    header h1 { font-size:15px; font-weight:700; line-height:1.2; }
+    header p  { font-size:11px; opacity:.55; }
+    .container { max-width:960px; margin:0 auto; padding:24px 16px 80px; }
+    .section { background:white; border-radius:14px; border:1px solid #e2e8f0; margin-bottom:20px; overflow:hidden; }
+    .section-header { background:var(--navy); color:white; padding:10px 18px; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
+    .section-header.orange { background:var(--orange); }
+    .section-body { padding:0 18px; }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:16px 0; }
+    .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; padding:16px 0; }
+    label.field-label { display:block; font-size:11px; font-weight:600; color:#64748b; margin-bottom:4px; text-transform:uppercase; letter-spacing:.04em; }
+    input[type=text],input[type=number],input[type=date],select,textarea { width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; color:#1e293b; background:white; transition:border-color .15s,box-shadow .15s; outline:none; }
+    input:focus,select:focus,textarea:focus { border-color:var(--orange); box-shadow:0 0 0 3px rgba(232,87,26,.12); }
+    textarea { resize:vertical; min-height:80px; }
+    .bool-row { display:flex; align-items:center; gap:12px; padding:9px 0; border-bottom:1px solid #f1f5f9; }
+    .bool-row:last-child { border-bottom:none; }
+    .bool-label { flex:1; font-size:13px; color:#334155; }
+    .bool-btns { display:flex; gap:6px; flex-shrink:0; }
+    .bool-btn { padding:4px 12px; border-radius:6px; border:1.5px solid #cbd5e1; font-size:11px; font-weight:700; cursor:pointer; background:white; color:#64748b; transition:all .12s; }
+    .bool-btn.sim.active { background:#22c55e; border-color:#22c55e; color:white; }
+    .bool-btn.nao.active { background:#ef4444; border-color:#ef4444; color:white; }
+    .bool-btn.na.active  { background:#94a3b8; border-color:#94a3b8; color:white; }
+    .bool-btn:hover { border-color:#94a3b8; }
+    .meas-table { width:100%; border-collapse:collapse; margin:8px 0 4px; }
+    .meas-table th { background:#f8fafc; font-size:11px; font-weight:700; color:#64748b; padding:7px 8px; border:1px solid #e2e8f0; text-transform:uppercase; letter-spacing:.04em; text-align:center; }
+    .meas-table th:nth-child(2) { text-align:left; }
+    .meas-table td { padding:5px 8px; border:1px solid #e2e8f0; font-size:13px; color:#334155; vertical-align:middle; }
+    .meas-table tr:nth-child(even) td { background:#fafcff; }
+    .meas-table td:first-child { text-align:center; font-weight:700; background:#f8fafc; min-width:44px; }
+    .meas-table td:nth-child(3) { text-align:center; font-size:12px; color:#475569; background:#f8fafc; white-space:nowrap; }
+    .meas-table td:last-child { text-align:center; min-width:120px; }
+    .meas-input { width:100%; border-radius:6px; text-align:right; padding:5px 8px; }
+    .meas-unit { display:flex; align-items:center; gap:5px; }
+    .meas-unit span { font-size:11px; color:#64748b; white-space:nowrap; }
+    .exec-table { width:100%; border-collapse:collapse; }
+    .exec-table th { background:#f1f5f9; font-size:11px; font-weight:700; color:#64748b; padding:7px 10px; border:1px solid #e2e8f0; text-transform:uppercase; letter-spacing:.04em; text-align:left; }
+    .exec-table td { padding:5px 8px; border:1px solid #e2e8f0; }
+    .exec-table input { font-size:12px; padding:5px 8px; border-radius:6px; }
+    .instr-table { width:100%; border-collapse:collapse; }
+    .instr-table th { background:#f1f5f9; font-size:11px; font-weight:700; color:#64748b; padding:7px 10px; border:1px solid #e2e8f0; text-transform:uppercase; }
+    .instr-table td { padding:5px 8px; border:1px solid #e2e8f0; }
+    .instr-table input { font-size:12px; padding:5px 8px; border-radius:6px; }
+    .sign-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0; border-top:1px solid #e2e8f0; }
+    .sign-cell { padding:10px 14px; border-right:1px solid #e2e8f0; }
+    .sign-cell:last-child { border-right:none; }
+    .sign-cell label.field-label { padding-bottom:6px; }
+    .submit-bar { position:fixed; bottom:0; left:0; right:0; background:white; border-top:1px solid #e2e8f0; padding:12px 24px; display:flex; justify-content:center; gap:12px; box-shadow:0 -4px 16px rgba(0,0,0,.08); z-index:100; }
+    .btn-submit { background:var(--orange); color:white; border:none; border-radius:10px; padding:11px 40px; font-size:14px; font-weight:700; cursor:pointer; transition:opacity .15s; }
+    .btn-submit:hover { opacity:.88; }
+    .btn-submit:disabled { opacity:.5; cursor:not-allowed; }
+    .btn-clear { background:white; color:#64748b; border:1.5px solid #cbd5e1; border-radius:10px; padding:11px 24px; font-size:14px; font-weight:600; cursor:pointer; }
+    #toast { position:fixed; top:80px; right:20px; z-index:999; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:600; display:none; box-shadow:0 4px 16px rgba(0,0,0,.15); }
+    #toast.success { background:#22c55e; color:white; }
+    #toast.error   { background:#ef4444; color:white; }
+    #success-screen { display:none; position:fixed; inset:0; background:var(--bg); z-index:200; flex-direction:column; align-items:center; justify-content:center; gap:20px; padding:32px; text-align:center; }
+    #success-screen .check-circle { width:80px; height:80px; border-radius:50%; background:#22c55e; display:flex; align-items:center; justify-content:center; }
+    #success-screen .check-circle svg { width:40px; height:40px; stroke:white; stroke-width:3; fill:none; }
+    #success-screen h2 { font-size:22px; font-weight:800; color:var(--navy); }
+    #success-screen p  { font-size:14px; color:#64748b; max-width:320px; line-height:1.5; }
+    .btn-exit { background:white; color:#64748b; border:1.5px solid #cbd5e1; border-radius:10px; padding:11px 24px; font-size:14px; font-weight:600; cursor:pointer; }
+    .btn-exit:hover { border-color:#94a3b8; color:#1e293b; }
+    .btn-add-row { background:transparent; border:1.5px solid rgba(255,255,255,.45); color:white; border-radius:7px; padding:3px 12px; font-size:11px; font-weight:700; cursor:pointer; transition:background .12s; }
+    .btn-add-row:hover { background:rgba(255,255,255,.15); }
+    @media(max-width:600px) { .grid-2,.grid-3 { grid-template-columns:1fr; } .sign-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand">M</div>
+  <div id="header-info">
+    <h1>Cubículo Retificador</h1>
+    <p>Formulário de Manutenção Anual — Preventiva</p>
+  </div>
+</header>
+
+<!-- SUCCESS SCREEN -->
+<div id="success-screen">
+  <div class="check-circle">
+    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+  </div>
+  <h2>FAE Submetida com Sucesso!</h2>
+  <p id="success-msg">O formulário foi enviado e registrado no sistema.</p>
+  <button class="btn-exit" onclick="window.location.href = window.location.origin + '/field/pending'">Sair</button>
+</div>
+
+<div class="container">
+
+  <!-- IDENTIFICAÇÃO -->
+  <div class="section">
+    <div class="section-header">Identificação da Ordem de Serviço</div>
+    <div class="section-body">
+      <div class="grid-3">
+        <div><label class="field-label">Nº da OS *</label><input type="text" id="os_number" readonly style="background:#f8fafc;color:#64748b" /></div>
+        <div><label class="field-label">Item PSA</label><input type="text" id="psa_item" placeholder="Ex: 3.2.1" /></div>
+        <div><label class="field-label">Data Programada *</label><input type="date" id="scheduled_date" readonly style="background:#f8fafc;color:#64748b" /></div>
+      </div>
+      <div class="grid-2" style="padding-top:0">
+        <div><label class="field-label">Localidade</label><input type="text" id="locality_name" readonly style="background:#f8fafc;color:#64748b" /></div>
+        <div><label class="field-label">Plano vinculado</label><input type="text" id="plan_title" readonly style="background:#f8fafc;color:#64748b" /></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ CUBÍCULO RETIFICADOR 1 -->
+  <div class="section">
+    <div class="section-header orange">Cubículo Retificador 1 — Inspeção (Itens 1–26 e 28–38 / 41–49 / 51–52)</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:8px">
+      <div id="bool-group-ret1"></div>
+    </div>
+  </div>
+
+  <!-- MEDIÇÕES RET 1 — ITEM 27 -->
+  <div class="section">
+    <div class="section-header">Cubículo Retificador 1 — Item 27* · Resistência de Isolamento (ref. ≥ 2 MΩ)</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:12px">
+      <table class="meas-table">
+        <thead><tr><th>ITEM</th><th style="text-align:left">Descrição da Medição</th><th>Referência</th><th>Valor Medido</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="8" style="vertical-align:middle">27</td>
+              <td>R Isolamento barramento Positivo/Negativo — Ret. 1</td>
+              <td rowspan="8" style="vertical-align:middle">≥ 2 MΩ</td>
+              <td><div class="meas-unit"><input type="number" id="r1_i27_r01" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento barramento Positivo/Massa — Ret. 1</td>
+              <td><div class="meas-unit"><input type="number" id="r1_i27_r02" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento barramento Negativo/Massa — Ret. 1</td>
+              <td><div class="meas-unit"><input type="number" id="r1_i27_r03" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento Massa/Terra — Ret. 1</td>
+              <td><div class="meas-unit"><input type="number" id="r1_i27_r04" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento barramento Positivo/Negativo — Ret. 2</td>
+              <td><div class="meas-unit"><input type="number" id="r1_i27_r05" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento barramento Positivo/Massa — Ret. 2</td>
+              <td><div class="meas-unit"><input type="number" id="r1_i27_r06" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento barramento Negativo/Massa — Ret. 2</td>
+              <td><div class="meas-unit"><input type="number" id="r1_i27_r07" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento Massa/Terra — Ret. 2</td>
+              <td><div class="meas-unit"><input type="number" id="r1_i27_r08" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MEDIÇÕES RET 1 — ITEM 39 -->
+  <div class="section">
+    <div class="section-header">Cubículo Retificador 1 — Item 39* · R Ôhmica Seccionadora Bipolar (ref. ≤ 60 μΩ)</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:12px">
+      <table class="meas-table">
+        <thead><tr><th>ITEM</th><th style="text-align:left">Descrição da Medição</th><th>Referência</th><th>Valor Medido</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="4" style="vertical-align:middle">39</td>
+              <td>R Ôhmica Contato Positivo Secc. Bipolar — Ret. 1</td>
+              <td rowspan="4" style="vertical-align:middle">≤ 60 μΩ</td>
+              <td><div class="meas-unit"><input type="number" id="r1_i39_r01" step="any" class="meas-input" /><span>μΩ</span></div></td></tr>
+          <tr><td>R Ôhmica Contato Negativo Secc. Bipolar — Ret. 1</td>
+              <td><div class="meas-unit"><input type="number" id="r1_i39_r02" step="any" class="meas-input" /><span>μΩ</span></div></td></tr>
+          <tr><td>R Ôhmica Contato Positivo Secc. Bipolar — Ret. 2</td>
+              <td><div class="meas-unit"><input type="number" id="r1_i39_r03" step="any" class="meas-input" /><span>μΩ</span></div></td></tr>
+          <tr><td>R Ôhmica Contato Negativo Secc. Bipolar — Ret. 2</td>
+              <td><div class="meas-unit"><input type="number" id="r1_i39_r04" step="any" class="meas-input" /><span>μΩ</span></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MEDIÇÕES RET 1 — ITEM 40 -->
+  <div class="section">
+    <div class="section-header">Cubículo Retificador 1 — Item 40* · R Isolamento Seccionadora Bipolar (ref. ≥ 2 MΩ)</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:12px">
+      <table class="meas-table">
+        <thead><tr><th>ITEM</th><th style="text-align:left">Descrição da Medição</th><th>Referência</th><th>Valor Medido</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="4" style="vertical-align:middle">40</td>
+              <td>R Isolamento Positivo Secc. Bipolar — Ret. 1</td>
+              <td rowspan="4" style="vertical-align:middle">≥ 2 MΩ</td>
+              <td><div class="meas-unit"><input type="number" id="r1_i40_r01" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento Negativo Secc. Bipolar — Ret. 1</td>
+              <td><div class="meas-unit"><input type="number" id="r1_i40_r02" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento Positivo Secc. Bipolar — Ret. 2</td>
+              <td><div class="meas-unit"><input type="number" id="r1_i40_r03" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento Negativo Secc. Bipolar — Ret. 2</td>
+              <td><div class="meas-unit"><input type="number" id="r1_i40_r04" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MEDIÇÕES RET 1 — ITEM 50 -->
+  <div class="section">
+    <div class="section-header">Cubículo Retificador 1 — Item 50* · Tensões Auxiliares</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:12px">
+      <table class="meas-table">
+        <thead><tr><th>ITEM</th><th style="text-align:left">Descrição da Medição</th><th>Referência</th><th>Valor Medido</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="2" style="vertical-align:middle">50</td>
+              <td>Tensão auxiliar de alimentação — Relé 64R</td>
+              <td style="text-align:center;font-size:12px">115 a 132 VCC</td>
+              <td><div class="meas-unit"><input type="number" id="r1_i50_v64r" step="any" class="meas-input" /><span>VCC</span></div></td></tr>
+          <tr><td>Tensão de comando, controle e proteção — Relé 32</td>
+              <td style="text-align:center;font-size:12px">24 VCC</td>
+              <td><div class="meas-unit"><input type="number" id="r1_i50_v32" step="any" class="meas-input" /><span>VCC</span></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ CUBÍCULO RETIFICADOR 2 -->
+  <div class="section">
+    <div class="section-header orange">Cubículo Retificador 2 — Inspeção (Itens 1–26 e 28–38 / 41–49 / 51–52)</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:8px">
+      <div id="bool-group-ret2"></div>
+    </div>
+  </div>
+
+  <!-- MEDIÇÕES RET 2 — ITEM 27 -->
+  <div class="section">
+    <div class="section-header">Cubículo Retificador 2 — Item 27* · Resistência de Isolamento (ref. ≥ 2 MΩ)</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:12px">
+      <table class="meas-table">
+        <thead><tr><th>ITEM</th><th style="text-align:left">Descrição da Medição</th><th>Referência</th><th>Valor Medido</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="8" style="vertical-align:middle">27</td>
+              <td>R Isolamento barramento Positivo/Negativo — Ret. 1</td>
+              <td rowspan="8" style="vertical-align:middle">≥ 2 MΩ</td>
+              <td><div class="meas-unit"><input type="number" id="r2_i27_r01" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento barramento Positivo/Massa — Ret. 1</td>
+              <td><div class="meas-unit"><input type="number" id="r2_i27_r02" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento barramento Negativo/Massa — Ret. 1</td>
+              <td><div class="meas-unit"><input type="number" id="r2_i27_r03" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento Massa/Terra — Ret. 1</td>
+              <td><div class="meas-unit"><input type="number" id="r2_i27_r04" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento barramento Positivo/Negativo — Ret. 2</td>
+              <td><div class="meas-unit"><input type="number" id="r2_i27_r05" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento barramento Positivo/Massa — Ret. 2</td>
+              <td><div class="meas-unit"><input type="number" id="r2_i27_r06" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento barramento Negativo/Massa — Ret. 2</td>
+              <td><div class="meas-unit"><input type="number" id="r2_i27_r07" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento Massa/Terra — Ret. 2</td>
+              <td><div class="meas-unit"><input type="number" id="r2_i27_r08" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MEDIÇÕES RET 2 — ITEM 39 -->
+  <div class="section">
+    <div class="section-header">Cubículo Retificador 2 — Item 39* · R Ôhmica Seccionadora Bipolar (ref. ≤ 60 μΩ)</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:12px">
+      <table class="meas-table">
+        <thead><tr><th>ITEM</th><th style="text-align:left">Descrição da Medição</th><th>Referência</th><th>Valor Medido</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="4" style="vertical-align:middle">39</td>
+              <td>R Ôhmica Contato Positivo Secc. Bipolar — Ret. 1</td>
+              <td rowspan="4" style="vertical-align:middle">≤ 60 μΩ</td>
+              <td><div class="meas-unit"><input type="number" id="r2_i39_r01" step="any" class="meas-input" /><span>μΩ</span></div></td></tr>
+          <tr><td>R Ôhmica Contato Negativo Secc. Bipolar — Ret. 1</td>
+              <td><div class="meas-unit"><input type="number" id="r2_i39_r02" step="any" class="meas-input" /><span>μΩ</span></div></td></tr>
+          <tr><td>R Ôhmica Contato Positivo Secc. Bipolar — Ret. 2</td>
+              <td><div class="meas-unit"><input type="number" id="r2_i39_r03" step="any" class="meas-input" /><span>μΩ</span></div></td></tr>
+          <tr><td>R Ôhmica Contato Negativo Secc. Bipolar — Ret. 2</td>
+              <td><div class="meas-unit"><input type="number" id="r2_i39_r04" step="any" class="meas-input" /><span>μΩ</span></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MEDIÇÕES RET 2 — ITEM 40 -->
+  <div class="section">
+    <div class="section-header">Cubículo Retificador 2 — Item 40* · R Isolamento Seccionadora Bipolar (ref. ≥ 2 MΩ)</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:12px">
+      <table class="meas-table">
+        <thead><tr><th>ITEM</th><th style="text-align:left">Descrição da Medição</th><th>Referência</th><th>Valor Medido</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="4" style="vertical-align:middle">40</td>
+              <td>R Isolamento Positivo Secc. Bipolar — Ret. 1</td>
+              <td rowspan="4" style="vertical-align:middle">≥ 2 MΩ</td>
+              <td><div class="meas-unit"><input type="number" id="r2_i40_r01" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento Negativo Secc. Bipolar — Ret. 1</td>
+              <td><div class="meas-unit"><input type="number" id="r2_i40_r02" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento Positivo Secc. Bipolar — Ret. 2</td>
+              <td><div class="meas-unit"><input type="number" id="r2_i40_r03" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>R Isolamento Negativo Secc. Bipolar — Ret. 2</td>
+              <td><div class="meas-unit"><input type="number" id="r2_i40_r04" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MEDIÇÕES RET 2 — ITEM 50 -->
+  <div class="section">
+    <div class="section-header">Cubículo Retificador 2 — Item 50* · Tensões Auxiliares</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:12px">
+      <table class="meas-table">
+        <thead><tr><th>ITEM</th><th style="text-align:left">Descrição da Medição</th><th>Referência</th><th>Valor Medido</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="2" style="vertical-align:middle">50</td>
+              <td>Tensão auxiliar de alimentação — Relé 64R</td>
+              <td style="text-align:center;font-size:12px">115 a 132 VCC</td>
+              <td><div class="meas-unit"><input type="number" id="r2_i50_v64r" step="any" class="meas-input" /><span>VCC</span></div></td></tr>
+          <tr><td>Tensão de comando, controle e proteção — Relé 32</td>
+              <td style="text-align:center;font-size:12px">24 VCC</td>
+              <td><div class="meas-unit"><input type="number" id="r2_i50_v32" step="any" class="meas-input" /><span>VCC</span></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- EXECUTANTES -->
+  <div class="section">
+    <div class="section-header" style="display:flex;align-items:center;justify-content:space-between">
+      <span>Executantes</span>
+      <button type="button" class="btn-add-row" onclick="addExecRow()">+ Adicionar linha</button>
+    </div>
+    <div class="section-body" style="padding:12px 0">
+      <table class="exec-table">
+        <thead>
+          <tr>
+            <th style="width:180px">Matrícula Executante</th>
+            <th>Início do Serviço</th>
+            <th>Fim do Serviço</th>
+            <th style="width:180px">Matrícula Executante</th>
+            <th>Início do Serviço</th>
+            <th>Fim do Serviço</th>
+          </tr>
+        </thead>
+        <tbody id="exec-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- COMENTÁRIOS -->
+  <div class="section">
+    <div class="section-header">Comentários</div>
+    <div class="section-body" style="padding:14px 0">
+      <textarea id="comentarios" rows="6" placeholder="Observações, anomalias encontradas, providências tomadas..."></textarea>
+    </div>
+  </div>
+
+  <!-- INSTRUMENTOS -->
+  <div class="section">
+    <div class="section-header" style="display:flex;align-items:center;justify-content:space-between">
+      <span>Instrumentos Utilizados</span>
+      <button type="button" class="btn-add-row" onclick="addInstrRow()">+ Adicionar linha</button>
+    </div>
+    <div class="section-body" style="padding:12px 0">
+      <table class="instr-table">
+        <thead><tr><th>Instrumento</th><th style="width:180px">TAG</th></tr></thead>
+        <tbody id="instr-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ENCERRAMENTO -->
+  <div class="section">
+    <div class="section-header">Encerramento</div>
+    <div class="sign-grid">
+      <div class="sign-cell">
+        <label class="field-label">Matrícula / Assinatura do Responsável</label>
+        <input type="text" id="responsavel_matricula" placeholder="Matrícula" />
+      </div>
+      <div class="sign-cell">
+        <label class="field-label">Assinatura Fiscalização</label>
+        <input type="text" id="assinatura_fiscalizacao" placeholder="Nome" />
+      </div>
+      <div class="sign-cell">
+        <label class="field-label">Data de Término do Serviço</label>
+        <input type="text" id="data_termino_servico" placeholder="DD/MM/AAAA HH:MM" />
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<div id="toast"></div>
+
+<div class="submit-bar">
+  <button class="btn-clear" onclick="clearForm()">Limpar</button>
+  <button class="btn-submit" id="btn-submit" onclick="submitForm()">Enviar Formulário</button>
+</div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://udnikmolgryzczalcbbz.supabase.co'
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkbmlrbW9sZ3J5emN6YWxjYmJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0MzcwNTUsImV4cCI6MjA2MTAxMzA1NX0.sRJHwHsQFCeE-7sxVP_2rFkTPYk6g3gHNxoCx6ZAnJI'
+const FORM_KEY = 'cubiculo-retificador'
+
+const { createClient } = supabase
+const db = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+let executionId = null
+
+// ─── ITENS DO CHECKLIST (compartilhado Ret 1 e Ret 2) ────────────────────────
+const CHECKLIST_ITEMS = [
+  { id:'i01', label:'1. Limpeza geral interna e externa do cubículo' },
+  { id:'i02', label:'2. Verificação de oxidação e corrosão nas estruturas metálicas' },
+  { id:'i03', label:'3. Verificação e reaperto dos terminais e conexões dos barramentos' },
+  { id:'i04', label:'4. Verificação do estado de conservação dos isoladores' },
+  { id:'i05', label:'5. Verificação do estado de conservação dos cabos e isolamentos' },
+  { id:'i06', label:'6. Verificação da chave seccionadora (abertura/fechamento)' },
+  { id:'i07', label:'7. Verificação dos fusíveis (estado e calibre)' },
+  { id:'i08', label:'8. Verificação da sinalização luminosa e sonora' },
+  { id:'i09', label:'9. Verificação do sistema de aterramento' },
+  { id:'i10', label:'10. Verificação das travas de segurança e intertravamentos' },
+  { id:'i11', label:'11. Verificação da ventilação e temperatura interna' },
+  { id:'i12', label:'12. Verificação do estado das chapas e vedações' },
+  { id:'i13', label:'13. Verificação do painel de controle e sinalização' },
+  { id:'i14', label:'14. Limpeza e verificação dos contatos da seccionadora bipolar' },
+  { id:'i15', label:'15. Verificação do mecanismo de bloqueio da seccionadora' },
+  { id:'i16', label:'16. Verificação do alinhamento e ajuste dos contatos' },
+  { id:'i17', label:'17. Lubrificação dos mecanismos de operação' },
+  { id:'i18', label:'18. Verificação dos indicadores de posição' },
+  { id:'i19', label:'19. Verificação da proteção térmica' },
+  { id:'i20', label:'20. Verificação das proteções de sobrecorrente' },
+  { id:'i21', label:'21. Verificação da proteção diferencial' },
+  { id:'i22', label:'22. Verificação dos relés auxiliares' },
+  { id:'i23', label:'23. Verificação dos transformadores de corrente (TC)' },
+  { id:'i24', label:'24. Verificação dos transformadores de potencial (TP)' },
+  { id:'i25', label:'25. Verificação dos amperímetros e voltímetros' },
+  { id:'i26', label:'26. Verificação do sistema de supervisão e controle' },
+  // i27 = medição (ver seção específica)
+  { id:'i28', label:'28. Verificação da estrutura de fixação dos barramentos' },
+  { id:'i29', label:'29. Verificação das conexões dos cabos de potência' },
+  { id:'i30', label:'30. Verificação do sistema de refrigeração dos retificadores' },
+  { id:'i31', label:'31. Verificação dos módulos retificadores' },
+  { id:'i32', label:'32. Verificação do filtro de saída (capacitores/indutores)' },
+  { id:'i33', label:'33. Verificação do banco de capacitores' },
+  { id:'i34', label:'34. Verificação das chaves de BY-PASS' },
+  { id:'i35', label:'35. Verificação das proteções de sobretensão' },
+  { id:'i36', label:'36. Verificação das proteções de subtensão' },
+  { id:'i37', label:'37. Verificação do sistema de aterramento do neutro' },
+  { id:'i38', label:'38. Verificação das conexões do transformador retificador' },
+  // i39, i40 = medição
+  { id:'i41', label:'41. Verificação das botoeiras e chaves de operação' },
+  { id:'i42', label:'42. Verificação da iluminação interna' },
+  { id:'i43', label:'43. Verificação dos detectores de fumaça/incêndio' },
+  { id:'i44', label:'44. Verificação do cabeamento de controle' },
+  { id:'i45', label:'45. Verificação do sistema de comunicação/supervisão' },
+  { id:'i46', label:'46. Verificação das etiquetas e identificação dos equipamentos' },
+  { id:'i47', label:'47. Verificação da documentação técnica no local' },
+  { id:'i48', label:'48. Verificação das condições ambientais da sala' },
+  { id:'i49', label:'49. Verificação do piso e acessos de segurança' },
+  // i50 = medição
+  { id:'i51', label:'51. Teste funcional do sistema de alarme' },
+  { id:'i52', label:'52. Inspeção final e limpeza pós-manutenção' },
+]
+
+// ─── FORM META (para form_field_metadata) ────────────────────────────────────
+function buildFormMeta() {
+  const boolFields = CHECKLIST_ITEMS.map(it => ({
+    key: it.id, label: it.label.replace(/^\d+\.\s*/, ''), section: 'Inspeção Geral', type: 'bool', unit: null, ref: null
+  }))
+
+  // Ret 1 bool fields prefixed with r1_
+  const boolRet1 = boolFields.map(f => ({ ...f, key: 'r1_' + f.key, section: 'Cubículo Retificador 1 — Inspeção' }))
+  const boolRet2 = boolFields.map(f => ({ ...f, key: 'r2_' + f.key, section: 'Cubículo Retificador 2 — Inspeção' }))
+
+  const measRet1 = [
+    { key:'r1_i27_r01', label:'Ret.1 — R Isol. barr. Pos/Neg Ret.1',     section:'Cubículo Retificador 1 — Item 27', type:'number', unit:'MΩ', ref:'≥ 2' },
+    { key:'r1_i27_r02', label:'Ret.1 — R Isol. barr. Pos/Massa Ret.1',   section:'Cubículo Retificador 1 — Item 27', type:'number', unit:'MΩ', ref:'≥ 2' },
+    { key:'r1_i27_r03', label:'Ret.1 — R Isol. barr. Neg/Massa Ret.1',   section:'Cubículo Retificador 1 — Item 27', type:'number', unit:'MΩ', ref:'≥ 2' },
+    { key:'r1_i27_r04', label:'Ret.1 — R Isol. Massa/Terra Ret.1',       section:'Cubículo Retificador 1 — Item 27', type:'number', unit:'MΩ', ref:'≥ 2' },
+    { key:'r1_i27_r05', label:'Ret.1 — R Isol. barr. Pos/Neg Ret.2',     section:'Cubículo Retificador 1 — Item 27', type:'number', unit:'MΩ', ref:'≥ 2' },
+    { key:'r1_i27_r06', label:'Ret.1 — R Isol. barr. Pos/Massa Ret.2',   section:'Cubículo Retificador 1 — Item 27', type:'number', unit:'MΩ', ref:'≥ 2' },
+    { key:'r1_i27_r07', label:'Ret.1 — R Isol. barr. Neg/Massa Ret.2',   section:'Cubículo Retificador 1 — Item 27', type:'number', unit:'MΩ', ref:'≥ 2' },
+    { key:'r1_i27_r08', label:'Ret.1 — R Isol. Massa/Terra Ret.2',       section:'Cubículo Retificador 1 — Item 27', type:'number', unit:'MΩ', ref:'≥ 2' },
+    { key:'r1_i39_r01', label:'Ret.1 — R Ôhm. Contato Pos. Secc. Ret.1', section:'Cubículo Retificador 1 — Item 39', type:'number', unit:'μΩ', ref:'≤ 60' },
+    { key:'r1_i39_r02', label:'Ret.1 — R Ôhm. Contato Neg. Secc. Ret.1', section:'Cubículo Retificador 1 — Item 39', type:'number', unit:'μΩ', ref:'≤ 60' },
+    { key:'r1_i39_r03', label:'Ret.1 — R Ôhm. Contato Pos. Secc. Ret.2', section:'Cubículo Retificador 1 — Item 39', type:'number', unit:'μΩ', ref:'≤ 60' },
+    { key:'r1_i39_r04', label:'Ret.1 — R Ôhm. Contato Neg. Secc. Ret.2', section:'Cubículo Retificador 1 — Item 39', type:'number', unit:'μΩ', ref:'≤ 60' },
+    { key:'r1_i40_r01', label:'Ret.1 — R Isol. Pos. Secc. Bipolar Ret.1', section:'Cubículo Retificador 1 — Item 40', type:'number', unit:'MΩ', ref:'≥ 2' },
+    { key:'r1_i40_r02', label:'Ret.1 — R Isol. Neg. Secc. Bipolar Ret.1', section:'Cubículo Retificador 1 — Item 40', type:'number', unit:'MΩ', ref:'≥ 2' },
+    { key:'r1_i40_r03', label:'Ret.1 — R Isol. Pos. Secc. Bipolar Ret.2', section:'Cubículo Retificador 1 — Item 40', type:'number', unit:'MΩ', ref:'≥ 2' },
+    { key:'r1_i40_r04', label:'Ret.1 — R Isol. Neg. Secc. Bipolar Ret.2', section:'Cubículo Retificador 1 — Item 40', type:'number', unit:'MΩ', ref:'≥ 2' },
+    { key:'r1_i50_v64r', label:'Ret.1 — Tensão aux. alimentação Relé 64R', section:'Cubículo Retificador 1 — Item 50', type:'number', unit:'VCC', ref:null },
+    { key:'r1_i50_v32',  label:'Ret.1 — Tensão cmd/controle/proteção Relé 32', section:'Cubículo Retificador 1 — Item 50', type:'number', unit:'VCC', ref:null },
+  ]
+
+  const measRet2 = measRet1.map(f => ({
+    ...f,
+    key: f.key.replace(/^r1_/, 'r2_'),
+    label: f.label.replace(/^Ret\.1/, 'Ret.2'),
+    section: f.section.replace('Retificador 1', 'Retificador 2'),
+  }))
+
+  return {
+    form_title: 'Cubículo Retificador — Manutenção Anual',
+    sections: [
+      { id:'s_bool_ret1', title:'Cubículo Retificador 1 — Inspeção', fields: boolRet1 },
+      { id:'s_meas_ret1', title:'Cubículo Retificador 1 — Medições',  fields: measRet1 },
+      { id:'s_bool_ret2', title:'Cubículo Retificador 2 — Inspeção', fields: boolRet2 },
+      { id:'s_meas_ret2', title:'Cubículo Retificador 2 — Medições',  fields: measRet2 },
+    ]
+  }
+}
+const FORM_META = buildFormMeta()
+
+// ─── RENDER BOOL GROUPS ───────────────────────────────────────────────────────
+function renderBoolGroup(containerId, prefix) {
+  const container = document.getElementById(containerId)
+  CHECKLIST_ITEMS.forEach(item => {
+    const key = prefix + '_' + item.id
+    const div = document.createElement('div')
+    div.className = 'bool-row'
+    div.innerHTML = `
+      <span class="bool-label">${item.label}</span>
+      <div class="bool-btns">
+        <button type="button" class="bool-btn sim" data-key="${key}" data-val="sim" onclick="toggleBool(this)">SIM</button>
+        <button type="button" class="bool-btn nao" data-key="${key}" data-val="nao" onclick="toggleBool(this)">NÃO</button>
+        <button type="button" class="bool-btn na"  data-key="${key}" data-val="na"  onclick="toggleBool(this)">N/A</button>
+      </div>`
+    container.appendChild(div)
+  })
+}
+
+// ─── RENDER EXECUTANTES ───────────────────────────────────────────────────────
+let execCount = 0
+function addExecRow() {
+  const i = execCount++
+  const row = document.createElement('tr')
+  row.innerHTML = `
+    <td><input type="text" id="exec_${i}_mat_a" placeholder="Matrícula" /></td>
+    <td><input type="text" id="exec_${i}_ini_a" placeholder="DD/MM/AAAA HH:MM" /></td>
+    <td><input type="text" id="exec_${i}_fim_a" placeholder="DD/MM/AAAA HH:MM" /></td>
+    <td><input type="text" id="exec_${i}_mat_b" placeholder="Matrícula" /></td>
+    <td><input type="text" id="exec_${i}_ini_b" placeholder="DD/MM/AAAA HH:MM" /></td>
+    <td><input type="text" id="exec_${i}_fim_b" placeholder="DD/MM/AAAA HH:MM" /></td>`
+  document.getElementById('exec-tbody').appendChild(row)
+}
+function renderExecutantes() {
+  execCount = 0
+  for (let i = 0; i < 3; i++) addExecRow()
+}
+
+// ─── RENDER INSTRUMENTOS ─────────────────────────────────────────────────────
+let instrCount = 0
+function addInstrRow() {
+  const i = instrCount++
+  const row = document.createElement('tr')
+  row.innerHTML = `
+    <td><input type="text" id="instr_${i}_nome" placeholder="Nome / modelo do instrumento" /></td>
+    <td><input type="text" id="instr_${i}_tag"  placeholder="TAG" /></td>`
+  document.getElementById('instr-tbody').appendChild(row)
+}
+function renderInstrumentos() {
+  instrCount = 0
+  for (let i = 0; i < 3; i++) addInstrRow()
+}
+
+// ─── BOOLEAN TOGGLE ───────────────────────────────────────────────────────────
+const boolState = {}
+function toggleBool(btn) {
+  const key = btn.dataset.key
+  const val = btn.dataset.val
+  const group = btn.closest('.bool-btns')
+  group.querySelectorAll('.bool-btn').forEach(b => b.classList.remove('active'))
+  btn.classList.add('active')
+  boolState[key] = val
+}
+
+// ─── COLLECT FORM DATA ────────────────────────────────────────────────────────
+function val(id) {
+  const el = document.getElementById(id)
+  if (!el) return null
+  const v = el.value.trim()
+  return v === '' ? null : v
+}
+
+function collectFormData() {
+  const data = {}
+
+  // Bool items Ret 1 and Ret 2
+  CHECKLIST_ITEMS.forEach(item => {
+    data['r1_' + item.id] = boolState['r1_' + item.id] ?? null
+    data['r2_' + item.id] = boolState['r2_' + item.id] ?? null
+  })
+
+  // Measurements Ret 1
+  ;['r1_i27_r01','r1_i27_r02','r1_i27_r03','r1_i27_r04','r1_i27_r05','r1_i27_r06','r1_i27_r07','r1_i27_r08',
+    'r1_i39_r01','r1_i39_r02','r1_i39_r03','r1_i39_r04',
+    'r1_i40_r01','r1_i40_r02','r1_i40_r03','r1_i40_r04',
+    'r1_i50_v64r','r1_i50_v32'].forEach(id => {
+    const v = val(id); data[id] = v !== null ? parseFloat(v) : null
+  })
+
+  // Measurements Ret 2
+  ;['r2_i27_r01','r2_i27_r02','r2_i27_r03','r2_i27_r04','r2_i27_r05','r2_i27_r06','r2_i27_r07','r2_i27_r08',
+    'r2_i39_r01','r2_i39_r02','r2_i39_r03','r2_i39_r04',
+    'r2_i40_r01','r2_i40_r02','r2_i40_r03','r2_i40_r04',
+    'r2_i50_v64r','r2_i50_v32'].forEach(id => {
+    const v = val(id); data[id] = v !== null ? parseFloat(v) : null
+  })
+
+  // Executantes — itera até o contador atual
+  const executantes = []
+  for (let i = 0; i < execCount; i++) {
+    const a = { matricula: val(`exec_${i}_mat_a`), inicio: val(`exec_${i}_ini_a`), fim: val(`exec_${i}_fim_a`) }
+    const b = { matricula: val(`exec_${i}_mat_b`), inicio: val(`exec_${i}_ini_b`), fim: val(`exec_${i}_fim_b`) }
+    if (a.matricula) executantes.push(a)
+    if (b.matricula) executantes.push(b)
+  }
+  data.executantes = executantes
+
+  // Instrumentos — itera até o contador atual
+  const instrumentos = []
+  for (let i = 0; i < instrCount; i++) {
+    const nome = val(`instr_${i}_nome`)
+    if (nome) instrumentos.push({ instrumento: nome, tag: val(`instr_${i}_tag`) })
+  }
+  data.instrumentos = instrumentos
+
+  // Comentários e encerramento
+  data.comentarios             = val('comentarios')
+  data.responsavel_matricula   = val('responsavel_matricula')
+  data.assinatura_fiscalizacao = val('assinatura_fiscalizacao')
+  data.data_termino_servico    = val('data_termino_servico')
+  data.psa_item                = val('psa_item')
+
+  return data
+}
+
+// ─── LOAD EXECUTION ───────────────────────────────────────────────────────────
+async function loadExecution() {
+  const params = new URLSearchParams(window.location.search)
+  const token  = params.get('token')
+  if (!token) { showError('Token não encontrado na URL.'); return }
+
+  const { data: exec, error } = await db
+    .from('maintenance_executions')
+    .select('id, os_number, scheduled_date, status, plan:maintenance_plans(title), locality:localities(name)')
+    .eq('access_token', token)
+    .single()
+
+  if (error || !exec) { showError('OS não encontrada ou token inválido.'); return }
+
+  // Já submetida?
+  if (exec.status !== 'pendente') {
+    showSuccess(`Esta OS (${exec.os_number}) já foi submetida anteriormente.`)
+    return
+  }
+  const { data: existingSub } = await db
+    .from('form_submissions')
+    .select('id')
+    .eq('execution_id', exec.id)
+    .eq('form_key', FORM_KEY)
+    .maybeSingle()
+  if (existingSub) {
+    showSuccess(`Esta OS (${exec.os_number}) já possui formulário enviado.`)
+    return
+  }
+
+  executionId = exec.id
+  document.getElementById('os_number').value      = exec.os_number ?? ''
+  document.getElementById('scheduled_date').value = (exec.scheduled_date ?? '').slice(0,10)
+  document.getElementById('locality_name').value  = exec.locality?.name ?? ''
+  document.getElementById('plan_title').value     = exec.plan?.title ?? 'Cubículo Retificador — Manutenção Anual'
+}
+
+// ─── SUBMIT ───────────────────────────────────────────────────────────────────
+async function submitForm() {
+  if (!executionId) { toast('OS não carregada. Verifique o link.', 'error'); return }
+
+  const btn = document.getElementById('btn-submit')
+  btn.disabled = true
+  btn.textContent = 'Enviando...'
+
+  try {
+    const formData = collectFormData()
+
+    // 1. Atualiza execution
+    const { data: updExec, error: updErr } = await db
+      .from('maintenance_executions')
+      .update({ form_data: formData, status: 'recebido' })
+      .eq('id', executionId)
+      .select('id')
+    if (updErr) throw new Error(updErr.message)
+    if (!updExec || updExec.length === 0) throw new Error('Falha ao atualizar OS (sem permissão).')
+
+    // 2. Insere em form_submissions
+    const { error: subErr } = await db
+      .from('form_submissions')
+      .insert({ execution_id: executionId, form_key: FORM_KEY, form_data: formData })
+    if (subErr) throw new Error(subErr.message)
+
+    showSuccess('Formulário enviado e registrado com sucesso.')
+  } catch(e) {
+    toast(e.message, 'error')
+    btn.disabled = false
+    btn.textContent = 'Enviar Formulário'
+  }
+}
+
+// ─── REGISTER FORM METADATA ───────────────────────────────────────────────────
+async function registerFormMetadata() {
+  const allFields = FORM_META.sections.flatMap(s => s.fields)
+  const { error } = await db
+    .from('form_field_metadata')
+    .upsert({
+      form_key:   FORM_KEY,
+      title:      FORM_META.form_title,
+      fields:     allFields,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'form_key' })
+  if (error) console.warn('Metadata upsert:', error.message)
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function toast(msg, type) {
+  const el = document.getElementById('toast')
+  el.textContent = msg; el.className = type; el.style.display = 'block'
+  setTimeout(() => el.style.display = 'none', 4000)
+}
+
+function showSuccess(msg) {
+  document.getElementById('success-msg').textContent = msg
+  const ss = document.getElementById('success-screen')
+  ss.style.display = 'flex'
+  document.querySelector('.submit-bar').style.display = 'none'
+}
+
+function showError(msg) { toast(msg, 'error') }
+
+function clearForm() {
+  document.querySelectorAll('.bool-btn').forEach(b => b.classList.remove('active'))
+  Object.keys(boolState).forEach(k => delete boolState[k])
+  document.querySelectorAll('input[type=number]').forEach(i => i.value = '')
+  document.querySelectorAll('input[type=text]:not([readonly])').forEach(i => i.value = '')
+  document.getElementById('comentarios').value = ''
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  renderBoolGroup('bool-group-ret1', 'r1')
+  renderBoolGroup('bool-group-ret2', 'r2')
+  renderExecutantes()
+  renderInstrumentos()
+  loadExecution()
+  registerFormMetadata()
+})
+</script>
+</body>
+</html>

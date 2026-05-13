@@ -18,9 +18,10 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 
 const roleOptions = [
-  { value: 'gestor',       label: 'Gestor de Contrato' },
-  { value: 'fiscalizacao', label: 'Fiscalização' },
-  { value: 'contratada',   label: 'Contratada' },
+  { value: 'gestor',         label: 'Gestor de Contrato' },
+  { value: 'fiscalizacao',   label: 'Fiscalização' },
+  { value: 'contratada',     label: 'Contratada' },
+  { value: 'operador_campo', label: 'Operador de Campo' },
 ]
 
 export function RegisterPage() {

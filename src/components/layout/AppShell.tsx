@@ -8,15 +8,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { isDesktop } = useViewMode()
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <Header />
-      <div className="flex flex-1 overflow-hidden">
-        {isDesktop && <Sidebar />}
-        <main className="flex-1 overflow-y-auto bg-metro-bg">
+    <div className="flex h-screen overflow-hidden bg-gray-50">
+      {isDesktop && <Sidebar />}
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <Header />
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
+        {!isDesktop && <BottomNav />}
       </div>
-      {!isDesktop && <BottomNav />}
     </div>
   )
 }

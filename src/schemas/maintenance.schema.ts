@@ -9,11 +9,17 @@ export const templateFieldSchema = z.object({
 })
 
 export const planSchema = z.object({
-  asset_id: z.string().uuid('Ativo obrigatório'),
+  asset_id: z.string().uuid().nullable().optional(),
+  periodicity_id: z.string().uuid('Periodicidade obrigatória'),
+  sistema_id: z.string().uuid().nullable().optional(),
   title: z.string().min(3, 'Título obrigatório'),
   plan_type: z.enum(['preventiva', 'irq']),
-  frequency: z.string().min(1, 'Frequência obrigatória'),
-  next_due: z.string().nullable().optional(),
+  frequency: z.string().nullable().optional(),
+  form_url: z.string()
+    .refine(v => !v || v.startsWith('/') || v.startsWith('http://') || v.startsWith('https://'), {
+      message: 'Informe uma URL (https://...) ou um caminho relativo (/forms/...)',
+    })
+    .nullable().optional().or(z.literal('')),
   template_fields: z.array(templateFieldSchema),
 })
 

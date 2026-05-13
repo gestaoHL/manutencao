@@ -1,15 +1,18 @@
 import { useState } from 'react'
-import { Plus, Wrench, Zap, Calendar, Trash2, Edit2 } from 'lucide-react'
+import { Plus, Wrench, Zap, Calendar, Trash2, Edit2, Cpu, Clock, ClipboardCheck } from 'lucide-react'
 import { usePlans, useCreatePlan, useUpdatePlan, useDeletePlan } from '@/hooks/usePlans'
-import { useAssets } from '@/hooks/useAssets'
 import { useAuth } from '@/hooks/useAuth'
-import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { Modal } from '@/components/ui/Modal'
 import { PlanFormModal } from './PlanFormModal'
 import type { MaintenancePlan, PlanType } from '@/types'
 import type { PlanFormData } from '@/schemas/maintenance.schema'
+
+const TYPE_LABEL: Record<PlanType, { label: string; className: string }> = {
+  preventiva: { label: 'Preventiva', className: 'bg-orange-50 text-metro-orange border border-orange-200' },
+  irq:        { label: 'IRQ',        className: 'bg-blue-50 text-blue-700 border border-blue-200' },
+}
 
 export function MaintenancePlansPage() {
   const { profile } = useAuth()
@@ -21,19 +24,12 @@ export function MaintenancePlansPage() {
   const [deleteTarget, setDeleteTarget] = useState<MaintenancePlan | null>(null)
 
   const { data: plans, isLoading } = usePlans(undefined, typeFilter || undefined)
-  const { data: allAssets } = useAssets(undefined)
   const createPlan = useCreatePlan()
   const updatePlan = useUpdatePlan(editTarget?.id ?? '')
   const deletePlan = useDeletePlan()
 
-  async function handleCreate(data: PlanFormData) {
-    await createPlan.mutateAsync(data)
-  }
-
-  async function handleUpdate(data: PlanFormData) {
-    await updatePlan.mutateAsync(data)
-  }
-
+  async function handleCreate(data: PlanFormData) { await createPlan.mutateAsync(data) }
+  async function handleUpdate(data: PlanFormData) { await updatePlan.mutateAsync(data) }
   async function handleDelete() {
     if (!deleteTarget) return
     await deletePlan.mutateAsync(deleteTarget.id)
@@ -41,29 +37,36 @@ export function MaintenancePlansPage() {
   }
 
   return (
-    <div className="p-4 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-xl font-bold text-metro-navy">Planos de Manutenção</h1>
-          <p className="text-sm text-gray-500">{(plans ?? []).length} planos cadastrados</p>
+    <div className="h-full flex flex-col">
+      {/* Page header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-metro-navy/10 flex items-center justify-center">
+            <ClipboardCheck size={18} className="text-metro-navy" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-metro-navy leading-none">Planos de Manutenção</h1>
+            <p className="text-xs text-gray-400 mt-0.5">{(plans ?? []).length} planos cadastrados</p>
+          </div>
         </div>
         {canEdit && (
           <Button onClick={() => setShowCreate(true)} size="sm">
-            <Plus size={16} /> Novo Plano
+            <Plus size={15} /> Novo Plano
           </Button>
         )}
       </div>
 
-      {/* Type filter */}
-      <div className="flex gap-2 mb-4">
+      {/* Filter bar */}
+      <div className="bg-white border-b border-gray-100 px-6 py-2.5 flex items-center gap-2 shrink-0">
+        <span className="text-xs text-gray-400 mr-1">Tipo:</span>
         {(['', 'preventiva', 'irq'] as const).map(t => (
           <button
             key={t}
             onClick={() => setTypeFilter(t)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${
+            className={`px-3 py-1 rounded-md text-xs font-semibold transition border ${
               typeFilter === t
-                ? 'bg-metro-orange text-white'
-                : 'bg-white text-gray-500 border border-gray-200'
+                ? 'bg-metro-navy text-white border-metro-navy'
+                : 'bg-white text-gray-500 border-gray-200 hover:border-metro-navy/40'
             }`}
           >
             {t === '' ? 'Todos' : t === 'preventiva' ? 'Preventiva' : 'IRQ'}
@@ -71,81 +74,96 @@ export function MaintenancePlansPage() {
         ))}
       </div>
 
-      {isLoading ? (
-        <Spinner />
-      ) : (plans ?? []).length === 0 ? (
-        <Card className="p-8 text-center text-gray-400">
-          <Wrench size={32} className="mx-auto mb-2 text-gray-300" />
-          <p className="text-sm">Nenhum plano cadastrado.</p>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {(plans ?? []).map(plan => (
-            <Card key={plan.id} className="p-4">
-              <div className="flex items-start gap-3">
-                <div className={`p-2 rounded-xl ${
-                  plan.plan_type === 'preventiva'
-                    ? 'bg-metro-orange/10 text-metro-orange'
-                    : 'bg-metro-navy/10 text-metro-navy'
-                }`}>
-                  {plan.plan_type === 'preventiva' ? <Wrench size={16} /> : <Zap size={16} />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-metro-navy text-sm">{plan.title}</p>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                      plan.plan_type === 'preventiva'
-                        ? 'bg-orange-100 text-metro-orange'
-                        : 'bg-blue-100 text-blue-700'
-                    }`}>
-                      {plan.plan_type === 'preventiva' ? 'Preventiva' : 'IRQ'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-0.5">{plan.asset?.name ?? '—'}</p>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
-                    <span>Freq: {plan.frequency}</span>
-                    {plan.next_due && (
-                      <span className="flex items-center gap-1">
-                        <Calendar size={10} />
-                        {new Date(plan.next_due).toLocaleDateString('pt-BR')}
-                      </span>
-                    )}
-                    <span>{plan.template_fields.length} campos</span>
-                  </div>
-                </div>
-                {canEdit && (
-                  <div className="flex gap-2 shrink-0">
-                    <button onClick={() => setEditTarget(plan)} className="text-gray-400 hover:text-metro-navy">
-                      <Edit2 size={15} />
-                    </button>
-                    <button onClick={() => setDeleteTarget(plan)} className="text-gray-400 hover:text-red-500">
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+      {/* Content */}
+      <div className="flex-1 overflow-auto p-6">
+        {isLoading ? (
+          <div className="flex justify-center pt-12"><Spinner /></div>
+        ) : (plans ?? []).length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+            <ClipboardCheck size={36} className="mx-auto mb-3 text-gray-200" />
+            <p className="text-sm font-medium text-gray-400">Nenhum plano cadastrado</p>
+            {canEdit && (
+              <p className="text-xs text-gray-400 mt-1">
+                Cadastre equipamentos e localidades em{' '}
+                <a href="/admin/settings" className="text-metro-orange hover:underline">Configurações</a>{' '}
+                antes de criar um plano.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Plano</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Tipo</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Equipamento</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Periodicidade</th>
+                  {canEdit && <th className="px-4 py-3 w-16" />}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {(plans ?? []).map(plan => {
+                  const typeInfo = TYPE_LABEL[plan.plan_type]
+                  return (
+                    <tr key={plan.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`p-1.5 rounded-lg ${plan.plan_type === 'preventiva' ? 'bg-orange-50' : 'bg-blue-50'}`}>
+                            {plan.plan_type === 'preventiva'
+                              ? <Wrench size={13} className="text-metro-orange" />
+                              : <Zap size={13} className="text-blue-600" />
+                            }
+                          </div>
+                          <div>
+                            <p className="font-medium text-metro-navy">{plan.title}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${typeInfo.className}`}>
+                          {typeInfo.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        {plan.periodicity ? (
+                          <span className="flex items-center gap-1.5 text-gray-700">
+                            <Clock size={12} className="text-gray-400" />
+                            {plan.periodicity.name}
+                          </span>
+                        ) : <span className="text-gray-300">—</span>}
+                      </td>
+                      {canEdit && (
+                        <td className="px-4 py-3">
+                          <div className="flex gap-1 justify-end">
+                            <button
+                              onClick={() => setEditTarget(plan)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-metro-navy hover:bg-gray-100 transition"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                            <button
+                              onClick={() => setDeleteTarget(plan)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
-      <PlanFormModal
-        open={showCreate}
-        onClose={() => setShowCreate(false)}
-        onSubmit={handleCreate}
-        assets={allAssets ?? []}
-      />
-
+      <PlanFormModal open={showCreate} onClose={() => setShowCreate(false)} onSubmit={handleCreate} />
       {editTarget && (
-        <PlanFormModal
-          open={!!editTarget}
-          onClose={() => setEditTarget(null)}
-          onSubmit={handleUpdate}
-          assets={allAssets ?? []}
-          initial={editTarget}
-        />
+        <PlanFormModal open={!!editTarget} onClose={() => setEditTarget(null)} onSubmit={handleUpdate} initial={editTarget} />
       )}
-
       <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Confirmar exclusão">
         <p className="text-sm text-gray-600 mb-4">
           Tem certeza que deseja excluir o plano <strong>{deleteTarget?.title}</strong>?

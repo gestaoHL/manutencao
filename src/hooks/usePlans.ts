@@ -9,7 +9,12 @@ export function usePlans(assetId?: string, planType?: PlanType) {
     queryFn: async (): Promise<MaintenancePlan[]> => {
       let query = supabase
         .from('maintenance_plans')
-        .select('*, asset:assets(id,name,type,location)')
+        .select(`
+          *,
+          asset:assets(id,name,type,location),
+          periodicity:periodicities(id,name,interval_days),
+          company:companies(id,name)
+        `)
         .order('created_at', { ascending: false })
 
       if (assetId) query = query.eq('asset_id', assetId)
@@ -28,7 +33,12 @@ export function usePlan(id: string) {
     queryFn: async (): Promise<MaintenancePlan> => {
       const { data, error } = await supabase
         .from('maintenance_plans')
-        .select('*, asset:assets(id,name,type,location)')
+        .select(`
+          *,
+          asset:assets(id,name,type,location),
+          periodicity:periodicities(id,name,interval_days),
+          company:companies(id,name)
+        `)
         .eq('id', id)
         .single()
       if (error) throw error
@@ -38,11 +48,25 @@ export function usePlan(id: string) {
   })
 }
 
+function sanitizePlan(data: PlanFormData) {
+  return {
+    title:          data.title,
+    plan_type:      data.plan_type,
+    periodicity_id: data.periodicity_id || null,
+    asset_id:       data.asset_id       || null,
+    company_id:     data.company_id     || null,
+    sistema_id:     data.sistema_id     || null,
+    frequency:      data.frequency      || null,
+    form_url:       data.form_url       || null,
+    template_fields: data.template_fields,
+  }
+}
+
 export function useCreatePlan() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (data: PlanFormData) => {
-      const { error } = await supabase.from('maintenance_plans').insert(data)
+      const { error } = await supabase.from('maintenance_plans').insert(sanitizePlan(data))
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['plans'] }),
@@ -53,7 +77,7 @@ export function useUpdatePlan(id: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (data: Partial<PlanFormData>) => {
-      const { error } = await supabase.from('maintenance_plans').update(data).eq('id', id)
+      const { error } = await supabase.from('maintenance_plans').update(sanitizePlan(data as PlanFormData)).eq('id', id)
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['plans'] }),

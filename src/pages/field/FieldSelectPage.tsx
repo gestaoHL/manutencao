@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Wrench, Zap, MapPin, ChevronRight, Wifi, WifiOff } from 'lucide-react'
+import { Wrench, Zap, MapPin, ChevronRight, Wifi, WifiOff, ClipboardList } from 'lucide-react'
 import { usePublicAssets, usePlans } from '@/hooks/usePlans'
 import { Spinner } from '@/components/ui/Spinner'
 import type { PlanType } from '@/types'
@@ -83,7 +83,23 @@ export function FieldSelectPage() {
 
         {/* Step: type selection */}
         {step === 'type' && (
-          <div className="grid grid-cols-2 gap-3 mt-2">
+          <div className="space-y-3 mt-2">
+          <button
+            onClick={() => navigate('/field/pending')}
+            className="w-full bg-white border border-gray-200 text-metro-navy rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:border-metro-orange active:scale-[0.98] transition"
+          >
+            <div className="w-10 h-10 bg-metro-orange/10 rounded-xl flex items-center justify-center shrink-0">
+              <ClipboardList size={20} className="text-metro-orange" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="font-semibold text-sm">Ver OSs pendentes</p>
+              <p className="text-xs text-gray-400">Acesse formulários já criados aguardando preenchimento</p>
+            </div>
+            <ChevronRight size={16} className="text-gray-300 shrink-0" />
+          </button>
+
+          <p className="text-xs text-gray-400 text-center">ou crie um novo registro:</p>
+          <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => selectType('preventiva')}
               className="bg-metro-orange text-white rounded-2xl p-5 flex flex-col items-center gap-3 shadow active:scale-95 transition"
@@ -98,6 +114,7 @@ export function FieldSelectPage() {
               <Zap size={32} strokeWidth={1.5} />
               <span className="font-semibold text-sm">IRQ</span>
             </button>
+          </div>
           </div>
         )}
 

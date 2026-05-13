@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Disjuntor Monopolar Extra-Rápido 1kVcc — Manutenção Anual</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root { --navy:#1A2B4A; --orange:#E8571A; --bg:#F4F6F9; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',sans-serif; background:var(--bg); color:#1e293b; font-size:14px; }
+    header { background:var(--navy); color:white; padding:16px 24px; display:flex; align-items:center; gap:14px; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+    .brand { width:36px; height:36px; border-radius:8px; background:var(--orange); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:18px; }
+    header h1 { font-size:15px; font-weight:700; line-height:1.2; }
+    header p  { font-size:11px; opacity:.55; }
+    .container { max-width:1080px; margin:0 auto; padding:24px 16px 80px; }
+    .section { background:white; border-radius:14px; border:1px solid #e2e8f0; margin-bottom:20px; overflow:hidden; }
+    .section-header { background:var(--navy); color:white; padding:10px 18px; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; display:flex; align-items:center; justify-content:space-between; }
+    .section-header.orange { background:var(--orange); }
+    .section-body { padding:0 18px; }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:16px 0; }
+    .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; padding:16px 0; }
+    label.field-label { display:block; font-size:11px; font-weight:600; color:#64748b; margin-bottom:4px; text-transform:uppercase; letter-spacing:.04em; }
+    input[type=text],input[type=number],input[type=date],select,textarea { width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; color:#1e293b; background:white; transition:border-color .15s,box-shadow .15s; outline:none; }
+    input:focus,select:focus,textarea:focus { border-color:var(--orange); box-shadow:0 0 0 3px rgba(232,87,26,.12); }
+    textarea { resize:vertical; min-height:100px; }
+
+    /* ── Checklist de itens (grade horizontal) ── */
+    .checklist-wrap { overflow-x:auto; padding:12px 0 4px; }
+    .ck-table { border-collapse:collapse; min-width:700px; width:100%; }
+    .ck-table th { background:#f1f5f9; font-size:11px; font-weight:700; color:#475569; padding:5px 4px; border:1px solid #e2e8f0; text-align:center; min-width:34px; }
+    .ck-table th.lbl { text-align:left; min-width:48px; padding-left:8px; }
+    .ck-table td { padding:3px 4px; border:1px solid #e2e8f0; text-align:center; vertical-align:middle; }
+    .ck-table td.lbl { font-size:11px; font-weight:700; color:#475569; background:#f8fafc; text-align:left; padding-left:8px; }
+    .ck-table td.meas-item { background:#fff7ed; }
+    .ck-btn { width:28px; height:24px; border-radius:5px; border:1.5px solid #cbd5e1; font-size:9px; font-weight:800; cursor:pointer; background:white; color:#94a3b8; transition:all .1s; display:block; margin:0 auto; }
+    .ck-btn.sim.active { background:#22c55e; border-color:#22c55e; color:white; }
+    .ck-btn.nao.active { background:#ef4444; border-color:#ef4444; color:white; }
+    .ck-note { font-size:10px; color:#94a3b8; padding:4px 0 8px; }
+
+    /* ── Medições ── */
+    .meas-table { width:100%; border-collapse:collapse; margin:8px 0 4px; }
+    .meas-table th { background:#f8fafc; font-size:11px; font-weight:700; color:#64748b; padding:7px 8px; border:1px solid #e2e8f0; text-transform:uppercase; letter-spacing:.04em; text-align:center; }
+    .meas-table th.left { text-align:left; }
+    .meas-table td { padding:5px 8px; border:1px solid #e2e8f0; font-size:13px; color:#334155; vertical-align:middle; }
+    .meas-table tr:nth-child(even) td { background:#fafcff; }
+    .meas-table td.item-num { text-align:center; font-weight:700; background:#f8fafc; min-width:44px; }
+    .meas-table td.ref { text-align:center; font-size:12px; color:#475569; background:#f8fafc; white-space:nowrap; }
+    .meas-table td.val { text-align:center; min-width:110px; }
+    .meas-input { width:100%; border-radius:6px; text-align:right; padding:5px 8px; font-size:13px; }
+    .meas-unit { display:flex; align-items:center; gap:5px; }
+    .meas-unit span { font-size:11px; color:#64748b; white-space:nowrap; }
+
+    /* ── Executantes ── */
+    .exec-table { width:100%; border-collapse:collapse; }
+    .exec-table th { background:#f1f5f9; font-size:11px; font-weight:700; color:#64748b; padding:7px 10px; border:1px solid #e2e8f0; text-transform:uppercase; letter-spacing:.04em; text-align:left; }
+    .exec-table td { padding:4px 6px; border:1px solid #e2e8f0; }
+    .exec-table input { font-size:12px; padding:5px 8px; border-radius:6px; }
+
+    /* ── Instrumentos ── */
+    .instr-table { width:100%; border-collapse:collapse; }
+    .instr-table th { background:#f1f5f9; font-size:11px; font-weight:700; color:#64748b; padding:7px 10px; border:1px solid #e2e8f0; text-transform:uppercase; }
+    .instr-table td { padding:5px 8px; border:1px solid #e2e8f0; }
+    .instr-table input { font-size:12px; padding:5px 8px; border-radius:6px; }
+
+    /* ── Rodapé ── */
+    .sign-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0; border-top:1px solid #e2e8f0; }
+    .sign-cell { padding:10px 14px; border-right:1px solid #e2e8f0; }
+    .sign-cell:last-child { border-right:none; }
+
+    /* ── Botões ── */
+    .submit-bar { position:fixed; bottom:0; left:0; right:0; background:white; border-top:1px solid #e2e8f0; padding:12px 24px; display:flex; justify-content:center; gap:12px; box-shadow:0 -4px 16px rgba(0,0,0,.08); z-index:100; }
+    .btn-submit { background:var(--orange); color:white; border:none; border-radius:10px; padding:11px 40px; font-size:14px; font-weight:700; cursor:pointer; transition:opacity .15s; }
+    .btn-submit:hover { opacity:.88; }
+    .btn-submit:disabled { opacity:.5; cursor:not-allowed; }
+    .btn-clear { background:white; color:#64748b; border:1.5px solid #cbd5e1; border-radius:10px; padding:11px 24px; font-size:14px; font-weight:600; cursor:pointer; }
+    .btn-add-row { background:transparent; border:1.5px solid rgba(255,255,255,.45); color:white; border-radius:7px; padding:3px 12px; font-size:11px; font-weight:700; cursor:pointer; transition:background .12s; }
+    .btn-add-row:hover { background:rgba(255,255,255,.15); }
+
+    /* ── Toast / Success ── */
+    #toast { position:fixed; top:80px; right:20px; z-index:999; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:600; display:none; box-shadow:0 4px 16px rgba(0,0,0,.15); }
+    #toast.success { background:#22c55e; color:white; }
+    #toast.error   { background:#ef4444; color:white; }
+    #success-screen { display:none; position:fixed; inset:0; background:var(--bg); z-index:200; flex-direction:column; align-items:center; justify-content:center; gap:20px; padding:32px; text-align:center; }
+    #success-screen .check-circle { width:80px; height:80px; border-radius:50%; background:#22c55e; display:flex; align-items:center; justify-content:center; }
+    #success-screen .check-circle svg { width:40px; height:40px; stroke:white; stroke-width:3; fill:none; }
+    #success-screen h2 { font-size:22px; font-weight:800; color:var(--navy); }
+    #success-screen p  { font-size:14px; color:#64748b; max-width:320px; line-height:1.5; }
+    .btn-exit { background:white; color:#64748b; border:1.5px solid #cbd5e1; border-radius:10px; padding:11px 24px; font-size:14px; font-weight:600; cursor:pointer; }
+    .btn-exit:hover { border-color:#94a3b8; color:#1e293b; }
+
+    @media(max-width:600px) { .grid-2,.grid-3 { grid-template-columns:1fr; } .sign-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand">M</div>
+  <div id="header-info">
+    <h1>Disjuntor Monopolar Extra-Rápido de 1 kVcc</h1>
+    <p>Formulário de Manutenção Anual — Preventiva</p>
+  </div>
+</header>
+
+<div id="success-screen">
+  <div class="check-circle">
+    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+  </div>
+  <h2>FAE Submetida com Sucesso!</h2>
+  <p id="success-msg">O formulário foi enviado e registrado no sistema.</p>
+  <button class="btn-exit" onclick="window.location.href = window.location.origin + '/field/pending'">Sair</button>
+</div>
+
+<div id="toast"></div>
+
+<div class="container">
+
+  <!-- IDENTIFICAÇÃO -->
+  <div class="section">
+    <div class="section-header">Identificação da Ordem de Serviço</div>
+    <div class="section-body">
+      <div class="grid-3">
+        <div><label class="field-label">Nº da OS</label><input type="text" id="os_number" readonly style="background:#f8fafc;color:#64748b" /></div>
+        <div><label class="field-label">Item PSA</label><input type="text" id="psa_item" placeholder="Ex: 54.1" /></div>
+        <div><label class="field-label">Data Programada</label><input type="date" id="scheduled_date" readonly style="background:#f8fafc;color:#64748b" /></div>
+      </div>
+      <div class="grid-2" style="padding-top:0">
+        <div><label class="field-label">Localidade</label><input type="text" id="locality_name" readonly style="background:#f8fafc;color:#64748b" /></div>
+        <div><label class="field-label">Plano vinculado</label><input type="text" id="plan_title" readonly style="background:#f8fafc;color:#64748b" /></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ DISJUNTOR 54.1 ═══════════════ -->
+  <div class="section">
+    <div class="section-header orange">54.1 — Disjuntor Monopolar Extra-Rápido de 1 kVcc</div>
+    <div class="section-body">
+      <div class="checklist-wrap">
+        <table class="ck-table" id="ck-d1"></table>
+        <p class="ck-note">* Itens de medição — preencher na seção de Medições abaixo.</p>
+      </div>
+      <div style="padding:12px 0 4px">
+        <p style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Medições — Item 21 (Resistência Isolamento)</p>
+        <table class="meas-table" id="mt-d1-iso"></table>
+        <p style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin:12px 0 8px">Medições — Item 22 (Resistência Ôhmica dos Contatos)</p>
+        <table class="meas-table" id="mt-d1-ohm"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ DISJUNTOR 54.2 ═══════════════ -->
+  <div class="section">
+    <div class="section-header orange">54.2 — Disjuntor Monopolar Extra-Rápido de 1 kVcc</div>
+    <div class="section-body">
+      <div class="checklist-wrap">
+        <table class="ck-table" id="ck-d2"></table>
+        <p class="ck-note">* Itens de medição — preencher na seção de Medições abaixo.</p>
+      </div>
+      <div style="padding:12px 0 4px">
+        <p style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Medições — Item 21 (Resistência Isolamento)</p>
+        <table class="meas-table" id="mt-d2-iso"></table>
+        <p style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin:12px 0 8px">Medições — Item 22 (Resistência Ôhmica dos Contatos)</p>
+        <table class="meas-table" id="mt-d2-ohm"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ DISJUNTOR 54.3 ═══════════════ -->
+  <div class="section">
+    <div class="section-header orange">54.3 — Disjuntor Monopolar Extra-Rápido de 1 kVcc</div>
+    <div class="section-body">
+      <div class="checklist-wrap">
+        <table class="ck-table" id="ck-d3"></table>
+        <p class="ck-note">* Itens de medição — preencher na seção de Medições abaixo.</p>
+      </div>
+      <div style="padding:12px 0 4px">
+        <p style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Medições — Item 21 (Resistência Isolamento)</p>
+        <table class="meas-table" id="mt-d3-iso"></table>
+        <p style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin:12px 0 8px">Medições — Item 22 (Resistência Ôhmica dos Contatos)</p>
+        <table class="meas-table" id="mt-d3-ohm"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ DISJUNTOR 54.4 ═══════════════ -->
+  <div class="section">
+    <div class="section-header orange">54.4 — Disjuntor Monopolar Extra-Rápido de 1 kVcc</div>
+    <div class="section-body">
+      <div class="checklist-wrap">
+        <table class="ck-table" id="ck-d4"></table>
+        <p class="ck-note">* Itens de medição — preencher na seção de Medições abaixo.</p>
+      </div>
+      <div style="padding:12px 0 4px">
+        <p style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Medições — Item 21 (Resistência Isolamento)</p>
+        <table class="meas-table" id="mt-d4-iso"></table>
+        <p style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin:12px 0 8px">Medições — Item 22 (Resistência Ôhmica dos Contatos)</p>
+        <table class="meas-table" id="mt-d4-ohm"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXECUTANTES -->
+  <div class="section">
+    <div class="section-header">
+      <span>Executantes</span>
+      <button class="btn-add-row" onclick="addExecRow()">+ Adicionar linha</button>
+    </div>
+    <div class="section-body" style="padding-top:12px;padding-bottom:12px">
+      <table class="exec-table">
+        <thead>
+          <tr>
+            <th>Matrícula Executante</th>
+            <th>Início do Serviço</th>
+            <th>Fim do Serviço</th>
+          </tr>
+        </thead>
+        <tbody id="exec-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- COMENTÁRIOS -->
+  <div class="section">
+    <div class="section-header">Comentários</div>
+    <div class="section-body" style="padding-top:14px;padding-bottom:14px">
+      <textarea id="comentarios" placeholder="Observações, ocorrências ou informações adicionais..."></textarea>
+    </div>
+  </div>
+
+  <!-- INSTRUMENTOS -->
+  <div class="section">
+    <div class="section-header">Instrumentos Utilizados</div>
+    <div class="section-body" style="padding-top:12px;padding-bottom:12px">
+      <table class="instr-table">
+        <thead>
+          <tr><th>Instrumento</th><th style="width:200px">TAG</th></tr>
+        </thead>
+        <tbody id="instr-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ASSINATURAS -->
+  <div class="section">
+    <div class="section-header">Assinaturas e Encerramento</div>
+    <div class="sign-grid">
+      <div class="sign-cell">
+        <label class="field-label">Matrícula / Assinatura do Responsável</label>
+        <input type="text" id="responsavel_matricula" placeholder="Matrícula" />
+      </div>
+      <div class="sign-cell">
+        <label class="field-label">Assinatura Fiscalização</label>
+        <input type="text" id="assinatura_fiscalizacao" placeholder="Nome / Matrícula" />
+      </div>
+      <div class="sign-cell">
+        <label class="field-label">Data de Término do Serviço</label>
+        <input type="datetime-local" id="data_termino" />
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<div class="submit-bar">
+  <button class="btn-clear" onclick="if(confirm('Limpar todo o formulário?')) location.reload()">Limpar</button>
+  <button class="btn-submit" id="btn-submit" onclick="submitForm()">Enviar FAE</button>
+</div>
+
+<script>
+// ─── Configuração ──────────────────────────────────────────────────────────────
+const FORM_KEY  = 'disjuntor-monopolar-extra-rapido-1kvcc'
+const SUPABASE_URL = 'https://tvsgomtyktnfuisofkpp.supabase.co'
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2c2dvbXR5a3RuZnVpc29ma3BwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxNDA5NzcsImV4cCI6MjA2MTcxNjk3N30.Spu53bLLBi4oENqRnhic0qlHv89hJBCXj-3lVKxmzgk'
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+
+// ─── FORM_META ─────────────────────────────────────────────────────────────────
+const DISJ = ['d1','d2','d3','d4']
+const DISJ_LABELS = { d1:'54.1', d2:'54.2', d3:'54.3', d4:'54.4' }
+const CHECKLIST_ITEMS = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]
+const MEAS_ITEMS = [21,22] // measurement items (marked with *)
+
+function buildFormMeta() {
+  const fields = []
+  // Boolean checklist fields per disjuntor
+  for (const d of DISJ) {
+    for (const n of CHECKLIST_ITEMS) {
+      fields.push({
+        key: `${d}_item_${n}`,
+        label: `${DISJ_LABELS[d]} — Item ${n}${MEAS_ITEMS.includes(n) ? '*' : ''}`,
+        section: `Disjuntor ${DISJ_LABELS[d]}`,
+        type: 'boolean',
+        ref: null,
+        unit: null,
+      })
+    }
+    // Isolation resistance (item 21) — 4 measurements per disjuntor
+    for (let i = 1; i <= 4; i++) {
+      fields.push({
+        key: `${d}_iso_${i}`,
+        label: `${DISJ_LABELS[d]} — Resist. Isolamento Disj. (${i})`,
+        section: `Disjuntor ${DISJ_LABELS[d]} — Medições Item 21`,
+        type: 'number',
+        ref: 2,
+        ref_dir: 'gte',
+        unit: 'MΩ',
+      })
+    }
+    // Ohmic contact resistance (item 22) — 4 measurements per disjuntor
+    for (let i = 1; i <= 4; i++) {
+      fields.push({
+        key: `${d}_ohm_${i}`,
+        label: `${DISJ_LABELS[d]} — Resist. Ôhmica Contatos Disj. (${i})`,
+        section: `Disjuntor ${DISJ_LABELS[d]} — Medições Item 22`,
+        type: 'number',
+        ref: 60,
+        ref_dir: 'lte',
+        unit: 'μΩ',
+      })
+    }
+  }
+  return fields
+}
+
+const FORM_META = buildFormMeta()
+
+async function registerFormMetadata() {
+  const rows = FORM_META.map(f => ({
+    form_key:  FORM_KEY,
+    field_key: f.key,
+    label:     f.label,
+    section:   f.section,
+    field_type: f.type,
+    ref_value: f.ref ?? null,
+    ref_dir:   f.ref_dir ?? null,
+    unit:      f.unit ?? null,
+  }))
+  for (const row of rows) {
+    await sb.from('form_field_metadata').upsert(row, { onConflict: 'form_key,field_key' })
+  }
+}
+
+// ─── Variáveis globais ─────────────────────────────────────────────────────────
+let execCount = 3
+let EXECUTION_ID = null
+
+// ─── Renderiza checklist de itens (tabela compacta) ───────────────────────────
+function renderChecklist(prefix, tableId) {
+  const table = document.getElementById(tableId)
+  // Cabeçalho
+  const thead = table.createTHead()
+  const hrow = thead.insertRow()
+  const lbl = document.createElement('th')
+  lbl.className = 'lbl'
+  lbl.textContent = 'ITEM'
+  hrow.appendChild(lbl)
+  for (const n of CHECKLIST_ITEMS) {
+    const th = document.createElement('th')
+    th.textContent = MEAS_ITEMS.includes(n) ? `${n}*` : n
+    if (MEAS_ITEMS.includes(n)) th.style.background = '#fff7ed'
+    hrow.appendChild(th)
+  }
+  const tbody = table.createTBody()
+  // Linhas SIM e NÃO
+  for (const val of ['SIM','NÃO']) {
+    const row = tbody.insertRow()
+    const lblCell = row.insertCell()
+    lblCell.className = 'lbl'
+    lblCell.textContent = val
+    for (const n of CHECKLIST_ITEMS) {
+      const cell = row.insertCell()
+      if (MEAS_ITEMS.includes(n)) cell.className = 'meas-item'
+      const btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = `ck-btn ${val === 'SIM' ? 'sim' : 'nao'}`
+      btn.id = `${prefix}_item_${n}_${val === 'SIM' ? 'sim' : 'nao'}`
+      btn.textContent = val === 'SIM' ? 'S' : 'N'
+      btn.onclick = () => toggleCk(prefix, n, val)
+      cell.appendChild(btn)
+    }
+  }
+}
+
+function toggleCk(prefix, n, val) {
+  const simBtn = document.getElementById(`${prefix}_item_${n}_sim`)
+  const naoBtn = document.getElementById(`${prefix}_item_${n}_nao`)
+  if (val === 'SIM') {
+    const isActive = simBtn.classList.contains('active')
+    simBtn.classList.toggle('active', !isActive)
+    naoBtn.classList.remove('active')
+  } else {
+    const isActive = naoBtn.classList.contains('active')
+    naoBtn.classList.toggle('active', !isActive)
+    simBtn.classList.remove('active')
+  }
+}
+
+function getCkValue(prefix, n) {
+  const sim = document.getElementById(`${prefix}_item_${n}_sim`)
+  const nao = document.getElementById(`${prefix}_item_${n}_nao`)
+  if (sim?.classList.contains('active')) return 'SIM'
+  if (nao?.classList.contains('active')) return 'NÃO'
+  return ''
+}
+
+function setCkValue(prefix, n, val) {
+  const sim = document.getElementById(`${prefix}_item_${n}_sim`)
+  const nao = document.getElementById(`${prefix}_item_${n}_nao`)
+  if (!sim || !nao) return
+  sim.classList.remove('active')
+  nao.classList.remove('active')
+  if (val === 'SIM') sim.classList.add('active')
+  else if (val === 'NÃO') nao.classList.add('active')
+}
+
+// ─── Renderiza tabela de medições ─────────────────────────────────────────────
+function renderMeasTable(prefix, type, tableId) {
+  const table = document.getElementById(tableId)
+  const isIso = type === 'iso'
+  const desc   = isIso ? 'Resistência Isolamento Disjuntor' : 'Resistência Ôhmica Contatos Disjuntor'
+  const ref    = isIso ? '>= 2 MΩ' : '<= 60 μΩ'
+  const unit   = isIso ? 'MΩ' : 'μΩ'
+  const itemNo = isIso ? 21 : 22
+
+  const thead = table.createTHead()
+  const hrow = thead.insertRow()
+  ;[['ITEM','44px','center'],['DESCRIÇÃO DA MEDIÇÃO','','left'],['REFERÊNCIA','100px','center'],['VALORES MEDIDOS','130px','center']]
+    .forEach(([t, w, a]) => {
+      const th = document.createElement('th')
+      th.textContent = t
+      th.className = a === 'left' ? 'left' : ''
+      if (w) th.style.width = w
+      hrow.appendChild(th)
+    })
+
+  const tbody = table.createTBody()
+  for (let i = 1; i <= 4; i++) {
+    const row = tbody.insertRow()
+    // Item number (rowspan on first)
+    const numCell = row.insertCell()
+    numCell.className = 'item-num'
+    numCell.textContent = itemNo
+    const descCell = row.insertCell()
+    descCell.textContent = `${desc} ( )`
+    const refCell = row.insertCell()
+    refCell.className = 'ref'
+    refCell.textContent = ref
+    const valCell = row.insertCell()
+    valCell.className = 'val'
+    const wrap = document.createElement('div')
+    wrap.className = 'meas-unit'
+    const inp = document.createElement('input')
+    inp.type = 'number'
+    inp.step = '0.001'
+    inp.className = 'meas-input'
+    inp.id = `${prefix}_${type}_${i}`
+    inp.placeholder = '0.000'
+    const sp = document.createElement('span')
+    sp.textContent = unit
+    wrap.appendChild(inp)
+    wrap.appendChild(sp)
+    valCell.appendChild(wrap)
+  }
+}
+
+// ─── Executantes ──────────────────────────────────────────────────────────────
+function addExecRow() {
+  execCount++
+  const tbody = document.getElementById('exec-body')
+  const n = execCount
+  const row = tbody.insertRow()
+  row.innerHTML = `
+    <td><input type="text" id="exec_${n}_matricula" placeholder="Matrícula" /></td>
+    <td><input type="datetime-local" id="exec_${n}_inicio" /></td>
+    <td><input type="datetime-local" id="exec_${n}_fim" /></td>
+  `
+}
+
+function initExecRows() {
+  const tbody = document.getElementById('exec-body')
+  for (let n = 1; n <= 3; n++) {
+    const row = tbody.insertRow()
+    row.innerHTML = `
+      <td><input type="text" id="exec_${n}_matricula" placeholder="Matrícula" /></td>
+      <td><input type="datetime-local" id="exec_${n}_inicio" /></td>
+      <td><input type="datetime-local" id="exec_${n}_fim" /></td>
+    `
+  }
+}
+
+// ─── Instrumentos (6 linhas fixas) ───────────────────────────────────────────
+function initInstrRows() {
+  const tbody = document.getElementById('instr-body')
+  for (let i = 1; i <= 6; i++) {
+    const row = tbody.insertRow()
+    row.innerHTML = `
+      <td><input type="text" id="instr_${i}_nome" placeholder="Instrumento" /></td>
+      <td><input type="text" id="instr_${i}_tag"  placeholder="TAG" /></td>
+    `
+  }
+}
+
+// ─── Coleta dados ─────────────────────────────────────────────────────────────
+function collectFormData() {
+  const data = {}
+  // Checklists e medições por disjuntor
+  for (const d of DISJ) {
+    for (const n of CHECKLIST_ITEMS) data[`${d}_item_${n}`] = getCkValue(d, n)
+    for (let i = 1; i <= 4; i++) {
+      data[`${d}_iso_${i}`] = parseFloat(document.getElementById(`${d}_iso_${i}`)?.value) || null
+      data[`${d}_ohm_${i}`] = parseFloat(document.getElementById(`${d}_ohm_${i}`)?.value) || null
+    }
+  }
+  // Executantes
+  for (let n = 1; n <= execCount; n++) {
+    const mat = document.getElementById(`exec_${n}_matricula`)?.value?.trim()
+    if (mat) {
+      data[`exec_${n}_matricula`] = mat
+      data[`exec_${n}_inicio`]    = document.getElementById(`exec_${n}_inicio`)?.value || null
+      data[`exec_${n}_fim`]       = document.getElementById(`exec_${n}_fim`)?.value    || null
+    }
+  }
+  // Outros
+  data['comentarios']             = document.getElementById('comentarios')?.value?.trim() || null
+  data['responsavel_matricula']   = document.getElementById('responsavel_matricula')?.value?.trim() || null
+  data['assinatura_fiscalizacao'] = document.getElementById('assinatura_fiscalizacao')?.value?.trim() || null
+  data['data_termino']            = document.getElementById('data_termino')?.value || null
+  for (let i = 1; i <= 6; i++) {
+    const nome = document.getElementById(`instr_${i}_nome`)?.value?.trim()
+    const tag  = document.getElementById(`instr_${i}_tag`)?.value?.trim()
+    if (nome) { data[`instr_${i}_nome`] = nome; data[`instr_${i}_tag`] = tag || null }
+  }
+  return data
+}
+
+// ─── Restaura dados (ao carregar execução existente) ──────────────────────────
+function restoreFormData(fd) {
+  if (!fd) return
+  for (const d of DISJ) {
+    for (const n of CHECKLIST_ITEMS) setCkValue(d, n, fd[`${d}_item_${n}`] || '')
+    for (let i = 1; i <= 4; i++) {
+      const iso = document.getElementById(`${d}_iso_${i}`)
+      const ohm = document.getElementById(`${d}_ohm_${i}`)
+      if (iso && fd[`${d}_iso_${i}`] != null) iso.value = fd[`${d}_iso_${i}`]
+      if (ohm && fd[`${d}_ohm_${i}`] != null) ohm.value = fd[`${d}_ohm_${i}`]
+    }
+  }
+  let n = 1
+  while (fd[`exec_${n}_matricula`]) {
+    while (n > execCount) addExecRow()
+    const mat = document.getElementById(`exec_${n}_matricula`)
+    const ini = document.getElementById(`exec_${n}_inicio`)
+    const fim = document.getElementById(`exec_${n}_fim`)
+    if (mat) mat.value = fd[`exec_${n}_matricula`] || ''
+    if (ini) ini.value = fd[`exec_${n}_inicio`] || ''
+    if (fim) fim.value = fd[`exec_${n}_fim`] || ''
+    n++
+  }
+  const fields = ['comentarios','responsavel_matricula','assinatura_fiscalizacao','data_termino']
+  fields.forEach(k => { const el = document.getElementById(k); if (el && fd[k] != null) el.value = fd[k] })
+  for (let i = 1; i <= 6; i++) {
+    const nome = document.getElementById(`instr_${i}_nome`)
+    const tag  = document.getElementById(`instr_${i}_tag`)
+    if (nome && fd[`instr_${i}_nome`]) nome.value = fd[`instr_${i}_nome`]
+    if (tag  && fd[`instr_${i}_tag`])  tag.value  = fd[`instr_${i}_tag`]
+  }
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast')
+  t.textContent = msg
+  t.className = type
+  t.style.display = 'block'
+  setTimeout(() => { t.style.display = 'none' }, 3500)
+}
+
+// ─── Carrega execução existente ───────────────────────────────────────────────
+async function loadExecution() {
+  const params = new URLSearchParams(location.search)
+  EXECUTION_ID = params.get('id')
+  if (!EXECUTION_ID) return
+
+  const { data, error } = await sb
+    .from('maintenance_executions')
+    .select('*, plan:maintenance_plans(title), locality:localities(name)')
+    .eq('id', EXECUTION_ID)
+    .single()
+
+  if (error || !data) { showToast('Erro ao carregar OS', 'error'); return }
+
+  document.getElementById('os_number').value     = data.os_number     || ''
+  document.getElementById('psa_item').value       = data.psa_item      || ''
+  document.getElementById('scheduled_date').value = data.scheduled_date || ''
+  document.getElementById('locality_name').value  = data.locality?.name || ''
+  document.getElementById('plan_title').value     = data.plan?.title    || ''
+
+  if (data.form_data && Object.keys(data.form_data).length > 0) {
+    restoreFormData(data.form_data)
+  }
+
+  await registerFormMetadata()
+}
+
+// ─── Envia formulário ─────────────────────────────────────────────────────────
+async function submitForm() {
+  if (!EXECUTION_ID) { showToast('OS não identificada. Acesse pelo link correto.', 'error'); return }
+  const btn = document.getElementById('btn-submit')
+  btn.disabled = true
+  btn.textContent = 'Enviando...'
+  try {
+    const form_data = collectFormData()
+    const { error } = await sb
+      .from('maintenance_executions')
+      .update({ form_data, status: 'em_analise', executed_date: new Date().toISOString().slice(0,10) })
+      .eq('id', EXECUTION_ID)
+    if (error) throw error
+    const ss = document.getElementById('success-screen')
+    ss.style.display = 'flex'
+  } catch(e) {
+    showToast('Erro ao enviar: ' + (e.message || e), 'error')
+    btn.disabled = false
+    btn.textContent = 'Enviar FAE'
+  }
+}
+
+// ─── Inicialização ────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  // Renderiza checklists e tabelas de medição para cada disjuntor
+  for (const d of DISJ) {
+    renderChecklist(d, `ck-${d}`)
+    renderMeasTable(d, 'iso', `mt-${d}-iso`)
+    renderMeasTable(d, 'ohm', `mt-${d}-ohm`)
+  }
+  initExecRows()
+  initInstrRows()
+  loadExecution()
+})
+</script>
+</body>
+</html>

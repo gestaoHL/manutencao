@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cubículo Blindado 1,0KVCC — Manutenção Anual</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root { --navy:#1A2B4A; --orange:#E8571A; --bg:#F4F6F9; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',sans-serif; background:var(--bg); color:#1e293b; font-size:14px; }
+    header { background:var(--navy); color:white; padding:16px 24px; display:flex; align-items:center; gap:14px; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+    .brand { width:36px; height:36px; border-radius:8px; background:var(--orange); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:18px; }
+    header h1 { font-size:15px; font-weight:700; line-height:1.2; }
+    header p  { font-size:11px; opacity:.55; }
+    .container { max-width:960px; margin:0 auto; padding:24px 16px 80px; }
+    .section { background:white; border-radius:14px; border:1px solid #e2e8f0; margin-bottom:20px; overflow:hidden; }
+    .section-header { background:var(--navy); color:white; padding:10px 18px; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
+    .section-body { padding:0 18px; }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:16px 0; }
+    .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; padding:16px 0; }
+    label.field-label { display:block; font-size:11px; font-weight:600; color:#64748b; margin-bottom:4px; text-transform:uppercase; letter-spacing:.04em; }
+    input[type=text],input[type=number],input[type=date],input[type=datetime-local],select,textarea { width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; color:#1e293b; background:white; transition:border-color .15s,box-shadow .15s; outline:none; }
+    input:focus,select:focus,textarea:focus { border-color:var(--orange); box-shadow:0 0 0 3px rgba(232,87,26,.12); }
+    textarea { resize:vertical; min-height:80px; }
+    .bool-row { display:flex; align-items:center; gap:12px; padding:9px 0; border-bottom:1px solid #f1f5f9; }
+    .bool-row:last-child { border-bottom:none; }
+    .bool-label { flex:1; font-size:13px; color:#334155; }
+    .bool-btns { display:flex; gap:6px; flex-shrink:0; }
+    .bool-btn { padding:4px 12px; border-radius:6px; border:1.5px solid #cbd5e1; font-size:11px; font-weight:700; cursor:pointer; background:white; color:#64748b; transition:all .12s; }
+    .bool-btn.sim.active { background:#22c55e; border-color:#22c55e; color:white; }
+    .bool-btn.nao.active { background:#ef4444; border-color:#ef4444; color:white; }
+    .bool-btn.na.active  { background:#94a3b8; border-color:#94a3b8; color:white; }
+    .bool-btn:hover { border-color:#94a3b8; }
+    .sub-title { font-size:11px; font-weight:700; color:var(--navy); text-transform:uppercase; letter-spacing:.06em; padding:12px 0 4px; border-bottom:2px solid var(--orange); margin-bottom:4px; }
+    .relay-table { width:100%; border-collapse:collapse; margin:8px 0 12px; }
+    .relay-table th { background:#f8fafc; text-align:left; font-size:11px; font-weight:700; color:#64748b; padding:6px 8px; border:1px solid #e2e8f0; text-transform:uppercase; letter-spacing:.04em; }
+    .relay-table td { padding:5px 8px; border:1px solid #e2e8f0; vertical-align:middle; }
+    .relay-table tr:nth-child(even) td { background:#f8fafc; }
+    .relay-table input[type=number] { min-width:90px; }
+    .relay-table select { min-width:80px; }
+    .meas-eq-table { width:100%; border-collapse:collapse; margin:12px 0; }
+    .meas-eq-table th { background:#f1f5f9; text-align:center; font-size:12px; font-weight:700; color:var(--navy); padding:7px 10px; border:1px solid #e2e8f0; }
+    .meas-eq-table td { padding:6px 10px; border:1px solid #e2e8f0; font-size:13px; color:#334155; vertical-align:middle; }
+    .meas-eq-table td:first-child { width:45%; background:#fafafa; }
+    .meas-eq-unit { display:flex; align-items:center; gap:6px; }
+    .meas-eq-unit span { font-size:12px; color:#64748b; white-space:nowrap; }
+    .meas-eq-table input { border-radius:6px; }
+    .meas-table { width:100%; border-collapse:collapse; margin:8px 0 4px; }
+    .meas-table th { background:#f8fafc; font-size:11px; font-weight:700; color:#64748b; padding:7px 8px; border:1px solid #e2e8f0; text-transform:uppercase; letter-spacing:.04em; text-align:center; }
+    .meas-table th:nth-child(2) { text-align:left; }
+    .meas-table td { padding:5px 8px; border:1px solid #e2e8f0; font-size:13px; color:#334155; vertical-align:middle; }
+    .meas-table tr:nth-child(even) td { background:#fafcff; }
+    .meas-table td:first-child { text-align:center; font-weight:700; background:#f8fafc; }
+    .meas-table td:nth-child(3) { text-align:center; font-size:12px; color:#475569; background:#f8fafc; }
+    .meas-table td:last-child { text-align:center; }
+    .meas-input { width:100%; min-width:80px; border-radius:6px; text-align:right; padding:5px 8px; }
+    .exec-grid { display:grid; grid-template-columns:180px 1fr 1fr 32px; gap:8px; padding:6px 0; border-bottom:1px solid #f1f5f9; align-items:center; }
+    .exec-grid:last-child { border-bottom:none; }
+    .exec-num { font-size:11px; font-weight:700; color:#94a3b8; }
+    .instr-row { display:grid; grid-template-columns:1fr 140px 32px; gap:8px; padding:6px 0; border-bottom:1px solid #f1f5f9; align-items:center; }
+    .instr-row:last-child { border-bottom:none; }
+    .submit-bar { position:fixed; bottom:0; left:0; right:0; background:white; border-top:1px solid #e2e8f0; padding:12px 24px; display:flex; justify-content:center; gap:12px; box-shadow:0 -4px 16px rgba(0,0,0,.08); z-index:100; }
+    .btn-submit { background:var(--orange); color:white; border:none; border-radius:10px; padding:11px 40px; font-size:14px; font-weight:700; cursor:pointer; transition:opacity .15s; }
+    .btn-submit:hover { opacity:.88; }
+    .btn-submit:disabled { opacity:.5; cursor:not-allowed; }
+    .btn-clear { background:white; color:#64748b; border:1.5px solid #cbd5e1; border-radius:10px; padding:11px 24px; font-size:14px; font-weight:600; cursor:pointer; }
+    #toast { position:fixed; top:80px; right:20px; z-index:999; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:600; display:none; box-shadow:0 4px 16px rgba(0,0,0,.15); }
+    #toast.success { background:#22c55e; color:white; }
+    #toast.error   { background:#ef4444; color:white; }
+    #success-screen { display:none; position:fixed; inset:0; background:var(--bg); z-index:200; flex-direction:column; align-items:center; justify-content:center; gap:20px; padding:32px; text-align:center; }
+    #success-screen .check-circle { width:80px; height:80px; border-radius:50%; background:#22c55e; display:flex; align-items:center; justify-content:center; }
+    #success-screen .check-circle svg { width:40px; height:40px; stroke:white; stroke-width:3; fill:none; }
+    #success-screen h2 { font-size:22px; font-weight:800; color:var(--navy); margin:0; }
+    #success-screen p { font-size:14px; color:#64748b; margin:0; max-width:320px; line-height:1.5; }
+    .btn-exit { background:white; color:#64748b; border:1.5px solid #cbd5e1; border-radius:10px; padding:11px 24px; font-size:14px; font-weight:600; cursor:pointer; }
+    .btn-exit:hover { border-color:#94a3b8; color:#1e293b; }
+    @media(max-width:600px) { .grid-2,.grid-3 { grid-template-columns:1fr; } .exec-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand">M</div>
+  <div id="header-info">
+    <h1>Cubículo Blindado 1,0KVCC</h1>
+    <p>Formulário de Manutenção Anual — Preventiva</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- IDENTIFICAÇÃO -->
+  <div class="section">
+    <div class="section-header">Identificação da Ordem de Serviço</div>
+    <div class="section-body">
+      <div class="grid-3">
+        <div><label class="field-label">Nº da OS *</label><input type="text" id="os_number" placeholder="Ex: OS-2024-001" required /></div>
+        <div><label class="field-label">Item PSA *</label><input type="text" id="psa_item" placeholder="Ex: 3.1.2" required /></div>
+        <div><label class="field-label">Data Programada *</label><input type="date" id="scheduled_date" required /></div>
+      </div>
+      <div class="grid-2" style="padding-top:0">
+        <div><label class="field-label">Localidade *</label><select id="locality_id" required><option value="">Carregando...</option></select></div>
+        <div><label class="field-label">Plano vinculado</label><input type="text" id="plan_title" readonly style="background:#f8fafc;color:#64748b" value="Cubículo Blindado 1,0KVCC — Manutenção Anual" /></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ITENS 1–12 -->
+  <div class="section">
+    <div class="section-header">Itens 1–12 · Inspeção Geral</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:8px"><div id="bool-group-1"></div></div>
+  </div>
+
+  <!-- EQ. MEDIÇÃO — CUBÍCULOS -->
+  <div class="section">
+    <div class="section-header">Equipamento de Medição — Isolamento Cubículos</div>
+    <div class="section-body">
+      <table class="meas-eq-table">
+        <thead><tr><th colspan="2">Dados Ambientais</th></tr></thead>
+        <tbody>
+          <tr><td>Temperatura</td><td><div class="meas-eq-unit"><input type="number" id="i13_temp" step="any" /><span>ºC</span></div></td></tr>
+          <tr><td>Umidade</td><td><div class="meas-eq-unit"><input type="number" id="i13_umidade" step="any" /><span>%</span></div></td></tr>
+        </tbody>
+        <thead><tr><th colspan="2">Dados Instrumentais</th></tr></thead>
+        <tbody>
+          <tr><td>Marca / Modelo</td><td><div class="meas-eq-unit"><input type="text" id="i13_marca" placeholder="Marca" /><span>/</span><input type="text" id="i13_modelo" placeholder="Modelo" /></div></td></tr>
+          <tr><td>Número de Série</td><td><input type="text" id="i13_serie" /></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ITEM 13 -->
+  <div class="section">
+    <div class="section-header">Item 13 · Medições — Resistência de Isolamento Cubículos</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:12px">
+      <table class="meas-table">
+        <thead><tr><th style="width:44px">ITEM</th><th style="text-align:left">Descrição da medição</th><th style="width:88px">Referência</th><th style="width:110px">Valores<br>medidos</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="16" style="vertical-align:middle">13</td><td>Isolamento Cubículos (COLUNAS 2 a 5) &nbsp; POSITIVO x NEGATIVO</td><td rowspan="16" style="vertical-align:middle">≥ 2 MΩ</td><td><input type="number" id="i13_r01" step="any" class="meas-input" /></td></tr>
+          <tr><td>Isolamento Cubículos (COLUNAS 2 a 5) &nbsp; POSITIVO x MASSA</td><td><input type="number" id="i13_r02" step="any" class="meas-input" /></td></tr>
+          <tr><td>Isolamento Cubículos (COLUNAS 2 a 5) &nbsp; NEGATIVO x MASSA</td><td><input type="number" id="i13_r03" step="any" class="meas-input" /></td></tr>
+          <tr><td>Isolamento Cubículos (COLUNAS 2 a 5) &nbsp; MASSA x TERRA</td><td><input type="number" id="i13_r04" step="any" class="meas-input" /></td></tr>
+          <tr><td>Isolamento Cubículos (COLUNA 1) &nbsp; POSITIVO x NEGATIVO</td><td><input type="number" id="i13_r05" step="any" class="meas-input" /></td></tr>
+          <tr><td>Isolamento Cubículos (COLUNA 1) &nbsp; NEGATIVO x MASSA</td><td><input type="number" id="i13_r06" step="any" class="meas-input" /></td></tr>
+          <tr><td>Isolamento Cubículos (COLUNA 1) &nbsp; TERRA x MASSA</td><td><input type="number" id="i13_r07" step="any" class="meas-input" /></td></tr>
+          <tr><td>Isolamento Cubículos (COLUNA 1) &nbsp; MASSA x MASSA ADJ</td><td><input type="number" id="i13_r08" step="any" class="meas-input" /></td></tr>
+          <tr><td>Isolamento Cubículos (COLUNA 1) &nbsp; POSITIVO &nbsp; SAÍDA x TERRA</td><td><input type="number" id="i13_r09" step="any" class="meas-input" /></td></tr>
+          <tr><td>Isolamento Cubículos (COLUNA 1) &nbsp; NEGATIVO &nbsp; SAÍDA x TERRA</td><td><input type="number" id="i13_r10" step="any" class="meas-input" /></td></tr>
+          <tr><td>Isolamento Cubículos (COLUNA 6) &nbsp; POSITIVO x NEGATIVO</td><td><input type="number" id="i13_r11" step="any" class="meas-input" /></td></tr>
+          <tr><td>Isolamento Cubículos (COLUNA 6) &nbsp; NEGATIVO x MASSA</td><td><input type="number" id="i13_r12" step="any" class="meas-input" /></td></tr>
+          <tr><td>Isolamento Cubículos (COLUNA 6) &nbsp; TERRA x MASSA</td><td><input type="number" id="i13_r13" step="any" class="meas-input" /></td></tr>
+          <tr><td>Isolamento Cubículos (COLUNA 6) &nbsp; MASSA x MASSA ADJ</td><td><input type="number" id="i13_r14" step="any" class="meas-input" /></td></tr>
+          <tr><td>Isolamento Cubículos (COLUNA 6) &nbsp; POSITIVO &nbsp; SAÍDA x TERRA</td><td><input type="number" id="i13_r15" step="any" class="meas-input" /></td></tr>
+          <tr><td>Isolamento Cubículos (COLUNA 6) &nbsp; NEGATIVO &nbsp; SAÍDA x TERRA</td><td><input type="number" id="i13_r16" step="any" class="meas-input" /></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ITENS 14–18 -->
+  <div class="section">
+    <div class="section-header">Itens 14–18 · Verificações do Disjuntor</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:8px"><div id="bool-group-2"></div></div>
+  </div>
+
+  <!-- EQ. MEDIÇÃO — PARA RAIOS -->
+  <div class="section">
+    <div class="section-header">Equipamento de Medição — Para Raios</div>
+    <div class="section-body">
+      <table class="meas-eq-table">
+        <thead><tr><th colspan="2">Dados Ambientais</th></tr></thead>
+        <tbody>
+          <tr><td>Temperatura</td><td><div class="meas-eq-unit"><input type="number" id="i19_temp" step="any" /><span>ºC</span></div></td></tr>
+          <tr><td>Umidade</td><td><div class="meas-eq-unit"><input type="number" id="i19_umidade" step="any" /><span>%</span></div></td></tr>
+        </tbody>
+        <thead><tr><th colspan="2">Dados Instrumentais</th></tr></thead>
+        <tbody>
+          <tr><td>Marca / Modelo</td><td><div class="meas-eq-unit"><input type="text" id="i19_marca" placeholder="Marca" /><span>/</span><input type="text" id="i19_modelo" placeholder="Modelo" /></div></td></tr>
+          <tr><td>Número de Série</td><td><input type="text" id="i19_serie" /></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ITEM 19 -->
+  <div class="section">
+    <div class="section-header">Item 19 · Medições — Isolamento Para-Raios</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:12px">
+      <table class="meas-table">
+        <thead><tr><th style="width:44px">ITEM</th><th style="text-align:left">Descrição da medição</th><th style="width:88px">Referência</th><th style="width:110px">Valores medidos</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="18" style="vertical-align:middle">19</td><td>Para-Raio F(63) NEGATIVO-TERRA Em 1,0 kV</td><td rowspan="18" style="vertical-align:middle">≥ 2 MΩ</td><td><div class="meas-eq-unit"><input type="number" id="i19_r01" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Para-Raio F(63) NEGATIVO-TERRA Em 2,5 kV</td><td><div class="meas-eq-unit"><input type="number" id="i19_r02" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Para-Raio F(63) NEGATIVO-TERRA Em 5,0 kV</td><td><div class="meas-eq-unit"><input type="number" id="i19_r03" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Para-Raio F(64) POSITIVO-TERRA Em 1,0 kV</td><td><div class="meas-eq-unit"><input type="number" id="i19_r04" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Para-Raio F(64) POSITIVO-TERRA Em 2,5 kV</td><td><div class="meas-eq-unit"><input type="number" id="i19_r05" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Para-Raio F(64) POSITIVO-TERRA Em 5,0 kV</td><td><div class="meas-eq-unit"><input type="number" id="i19_r06" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Para-Raio F(65) POSITIVO-TERRA Em 1,0 kV</td><td><div class="meas-eq-unit"><input type="number" id="i19_r07" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Para-Raio F(65) POSITIVO-TERRA Em 2,5 kV</td><td><div class="meas-eq-unit"><input type="number" id="i19_r08" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Para-Raio F(65) POSITIVO-TERRA Em 5,0 kV</td><td><div class="meas-eq-unit"><input type="number" id="i19_r09" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Para-Raio F(13) NEGATIVO-TERRA Em 1,0 kV</td><td><div class="meas-eq-unit"><input type="number" id="i19_r10" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Para-Raio F(13) NEGATIVO-TERRA Em 2,5 kV</td><td><div class="meas-eq-unit"><input type="number" id="i19_r11" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Para-Raio F(13) NEGATIVO-TERRA Em 5,0 kV</td><td><div class="meas-eq-unit"><input type="number" id="i19_r12" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Para-Raio F(14) POSITIVO-TERRA Em 1,0 kV</td><td><div class="meas-eq-unit"><input type="number" id="i19_r13" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Para-Raio F(14) POSITIVO-TERRA Em 2,5 kV</td><td><div class="meas-eq-unit"><input type="number" id="i19_r14" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Para-Raio F(14) POSITIVO-TERRA Em 5,0 kV</td><td><div class="meas-eq-unit"><input type="number" id="i19_r15" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Para-Raio F(15) POSITIVO-TERRA Em 1,0 kV</td><td><div class="meas-eq-unit"><input type="number" id="i19_r16" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Para-Raio F(15) POSITIVO-TERRA Em 2,5 kV</td><td><div class="meas-eq-unit"><input type="number" id="i19_r17" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Para-Raio F(15) POSITIVO-TERRA Em 5,0 kV</td><td><div class="meas-eq-unit"><input type="number" id="i19_r18" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ITENS 20–28 -->
+  <div class="section">
+    <div class="section-header">Itens 20–28 · Verificação de Proteções e Transformadores</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:8px"><div id="bool-group-3"></div></div>
+  </div>
+
+  <!-- EQ. MEDIÇÃO — SECCIONADORAS E CABOS -->
+  <div class="section">
+    <div class="section-header">Equipamento de Medição — Seccionadoras e Cabos</div>
+    <div class="section-body">
+      <table class="meas-eq-table">
+        <thead><tr><th colspan="2">Dados Ambientais</th></tr></thead>
+        <tbody>
+          <tr><td>Temperatura</td><td><div class="meas-eq-unit"><input type="number" id="i2931_temp" step="any" /><span>ºC</span></div></td></tr>
+          <tr><td>Umidade</td><td><div class="meas-eq-unit"><input type="number" id="i2931_umidade" step="any" /><span>%</span></div></td></tr>
+        </tbody>
+        <thead><tr><th colspan="2">Dados Instrumentais</th></tr></thead>
+        <tbody>
+          <tr><td>Marca / Modelo</td><td><div class="meas-eq-unit"><input type="text" id="i2931_marca1" placeholder="Marca" /><span>/</span><input type="text" id="i2931_modelo1" placeholder="Modelo" /></div></td></tr>
+          <tr><td>Número de Série</td><td><input type="text" id="i2931_serie1" /></td></tr>
+        </tbody>
+        <thead><tr><th colspan="2">Dados Instrumentais</th></tr></thead>
+        <tbody>
+          <tr><td>Marca / Modelo</td><td><div class="meas-eq-unit"><input type="text" id="i2931_marca2" placeholder="Marca" /><span>/</span><input type="text" id="i2931_modelo2" placeholder="Modelo" /></div></td></tr>
+          <tr><td>Número de Série</td><td><input type="text" id="i2931_serie2" /></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ITEM 29 -->
+  <div class="section">
+    <div class="section-header">Item 29 · Medições — Isolamento Seccionadoras</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:12px">
+      <table class="meas-table">
+        <thead><tr><th style="width:44px">ITEM</th><th style="text-align:left">Descrição da medição</th><th style="width:88px">Referência</th><th style="width:120px">Valores Medidos</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="6" style="vertical-align:middle">29</td><td>Isolamento Seccionadora Negativa Via (89.8)</td><td rowspan="6" style="vertical-align:middle">≥ 2 MΩ</td><td><div class="meas-eq-unit"><input type="number" id="i29_r01" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Isolamento Seccionadora Negativa Via (89.13)</td><td><div class="meas-eq-unit"><input type="number" id="i29_r02" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Isolamento Seccionadora Positiva (89.9)</td><td><div class="meas-eq-unit"><input type="number" id="i29_r03" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Isolamento Seccionadora Positiva (89.10)</td><td><div class="meas-eq-unit"><input type="number" id="i29_r04" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Isolamento Seccionadora Positiva (89.11)</td><td><div class="meas-eq-unit"><input type="number" id="i29_r05" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Isolamento Seccionadora Positiva (89.12)</td><td><div class="meas-eq-unit"><input type="number" id="i29_r06" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ITEM 30 -->
+  <div class="section">
+    <div class="section-header">Item 30 · Medições — Contatos Seccionadoras</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:12px">
+      <table class="meas-table">
+        <thead><tr><th style="width:44px">ITEM</th><th style="text-align:left">Descrição da medição</th><th style="width:88px">Referência</th><th style="width:110px">MEDIDO</th><th style="width:110px">DEIXADO</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="6" style="vertical-align:middle">30</td><td>Contatos Seccionadora Negativa Via (89.8)</td><td rowspan="6" style="vertical-align:middle">≤ 60 μΩ</td><td><div class="meas-eq-unit"><input type="number" id="i30_r01_med" step="any" class="meas-input" /><span>μΩ</span></div></td><td><div class="meas-eq-unit"><input type="number" id="i30_r01_dei" step="any" class="meas-input" /><span>μΩ</span></div></td></tr>
+          <tr><td>Contatos Seccionadora Negativa Via (89.13)</td><td><div class="meas-eq-unit"><input type="number" id="i30_r02_med" step="any" class="meas-input" /><span>μΩ</span></div></td><td><div class="meas-eq-unit"><input type="number" id="i30_r02_dei" step="any" class="meas-input" /><span>μΩ</span></div></td></tr>
+          <tr><td>Contatos Seccionadora Positiva (89.9)</td><td><div class="meas-eq-unit"><input type="number" id="i30_r03_med" step="any" class="meas-input" /><span>μΩ</span></div></td><td><div class="meas-eq-unit"><input type="number" id="i30_r03_dei" step="any" class="meas-input" /><span>μΩ</span></div></td></tr>
+          <tr><td>Contatos Seccionadora Positiva (89.10)</td><td><div class="meas-eq-unit"><input type="number" id="i30_r04_med" step="any" class="meas-input" /><span>μΩ</span></div></td><td><div class="meas-eq-unit"><input type="number" id="i30_r04_dei" step="any" class="meas-input" /><span>μΩ</span></div></td></tr>
+          <tr><td>Contatos Seccionadora Positiva (89.11)</td><td><div class="meas-eq-unit"><input type="number" id="i30_r05_med" step="any" class="meas-input" /><span>μΩ</span></div></td><td><div class="meas-eq-unit"><input type="number" id="i30_r05_dei" step="any" class="meas-input" /><span>μΩ</span></div></td></tr>
+          <tr><td>Contatos Seccionadora Positiva (89.12)</td><td><div class="meas-eq-unit"><input type="number" id="i30_r06_med" step="any" class="meas-input" /><span>μΩ</span></div></td><td><div class="meas-eq-unit"><input type="number" id="i30_r06_dei" step="any" class="meas-input" /><span>μΩ</span></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ITEM 31 -->
+  <div class="section">
+    <div class="section-header">Item 31 · Medições — Isolamento Cabos de Alimentação</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:12px">
+      <table class="meas-table">
+        <thead><tr><th style="width:44px">ITEM</th><th style="text-align:left">Descrição da medição</th><th style="width:88px">Referência</th><th style="width:120px">Valores Medidos</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="6" style="vertical-align:middle">31</td><td>Isolam Cabos Condutor Negativa (89.8)</td><td rowspan="6" style="vertical-align:middle">≥ 2 MΩ</td><td><div class="meas-eq-unit"><input type="number" id="i31_r01" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Isolam Cabos Condutor Negativa (89.13)</td><td><div class="meas-eq-unit"><input type="number" id="i31_r02" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Isolam Cabos Condutor Positiva (89.9)</td><td><div class="meas-eq-unit"><input type="number" id="i31_r03" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Isolam Cabos Condutor Positiva (89.10)</td><td><div class="meas-eq-unit"><input type="number" id="i31_r04" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Isolam Cabos Condutor Positiva (89.11)</td><td><div class="meas-eq-unit"><input type="number" id="i31_r05" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+          <tr><td>Isolam Cabos Condutor Positiva (89.12)</td><td><div class="meas-eq-unit"><input type="number" id="i31_r06" step="any" class="meas-input" /><span>MΩ</span></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ITENS 32–35 -->
+  <div class="section">
+    <div class="section-header">Itens 32–35 · Verificações Finais de Controle</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:8px"><div id="bool-group-4"></div></div>
+  </div>
+
+  <!-- ITENS 36–37 -->
+  <div class="section">
+    <div class="section-header">Itens 36–37 · Aterramento e Temperatura</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:8px">
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f1f5f9">
+        <span style="flex:1;font-size:13px;color:#334155">36. Resistência de aterramento</span>
+        <div class="meas-eq-unit" style="flex-shrink:0;width:160px"><input type="number" id="i36" step="any" /><span>Ω</span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 0">
+        <span style="flex:1;font-size:13px;color:#334155">37. Temperatura dos barramentos em carga</span>
+        <div class="meas-eq-unit" style="flex-shrink:0;width:160px"><input type="number" id="i37" step="any" /><span>°C</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ITEM 38 -->
+  <div class="section">
+    <div class="section-header">Item 38 · Relé 64V — Verificação de Terra</div>
+    <div class="section-body">
+      <div class="grid-2" style="padding-top:12px">
+        <div><label class="field-label">Marca / Modelo</label><input type="text" id="i38_marca" /></div>
+        <div><label class="field-label">Nº de Série</label><input type="text" id="i38_serie" /></div>
+      </div>
+      <div id="rele64v-tables"></div>
+    </div>
+  </div>
+
+  <!-- ITEM 39 -->
+  <div class="section">
+    <div class="section-header">Item 39 · Temporizador</div>
+    <div class="section-body" style="padding-top:8px;padding-bottom:8px"><div id="bool-group-5"></div></div>
+  </div>
+
+  <!-- ITEM 40 -->
+  <div class="section">
+    <div class="section-header">Item 40 · Relé DIA-IGT — Proteção Diferencial</div>
+    <div class="section-body">
+      <div class="grid-2" style="padding-top:12px">
+        <div><label class="field-label">Marca / Modelo</label><input type="text" id="i40_marca" /></div>
+        <div><label class="field-label">Nº de Série</label><input type="text" id="i40_serie" /></div>
+      </div>
+      <div id="diagt-tables"></div>
+    </div>
+  </div>
+
+  <!-- ITEM 41 -->
+  <div class="section">
+    <div class="section-header">Item 41 · Equipamento de Medição — Circuito de Leitura DIA-IGT</div>
+    <div class="section-body">
+      <div class="grid-2" style="padding-top:12px">
+        <div><label class="field-label">Marca / Modelo</label><input type="text" id="i41_marca" /></div>
+        <div><label class="field-label">Nº de Série</label><input type="text" id="i41_serie" /></div>
+      </div>
+      <div id="leitura-tables"></div>
+    </div>
+  </div>
+
+  <!-- EXECUTANTES -->
+  <div class="section">
+    <div class="section-header">Executantes do Serviço</div>
+    <div class="section-body" style="padding:12px 0">
+      <div style="display:grid;grid-template-columns:180px 1fr 1fr 32px;gap:8px;padding:4px 0;margin-bottom:4px">
+        <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Matrícula</span>
+        <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Início</span>
+        <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Fim</span>
+        <span></span>
+      </div>
+      <div id="executantes"></div>
+      <button type="button" onclick="addExecutante()" style="margin-top:10px;display:flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px dashed #cbd5e1;border-radius:8px;background:white;color:#64748b;font-size:12px;font-weight:600;cursor:pointer" onmouseover="this.style.borderColor='#E8571A';this.style.color='#E8571A'" onmouseout="this.style.borderColor='#cbd5e1';this.style.color='#64748b'">
+        <span style="font-size:16px;line-height:1">+</span> Adicionar executante
+      </button>
+    </div>
+  </div>
+
+  <!-- COMENTÁRIOS -->
+  <div class="section">
+    <div class="section-header">Comentários / Observações</div>
+    <div class="section-body" style="padding:12px 0">
+      <textarea id="comentarios" rows="4" placeholder="Registre aqui qualquer observação relevante..."></textarea>
+    </div>
+  </div>
+
+  <!-- INSTRUMENTOS -->
+  <div class="section">
+    <div class="section-header">Instrumentos Utilizados</div>
+    <div class="section-body" style="padding:12px 0">
+      <div style="display:grid;grid-template-columns:1fr 140px 32px;gap:8px;margin-bottom:6px">
+        <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Instrumento / Tipo</span>
+        <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">TAG</span>
+        <span></span>
+      </div>
+      <div id="instrumentos"></div>
+      <button type="button" onclick="addInstrumento()" style="margin-top:10px;display:flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px dashed #cbd5e1;border-radius:8px;background:white;color:#64748b;font-size:12px;font-weight:600;cursor:pointer" onmouseover="this.style.borderColor='#E8571A';this.style.color='#E8571A'" onmouseout="this.style.borderColor='#cbd5e1';this.style.color='#64748b'">
+        <span style="font-size:16px;line-height:1">+</span> Adicionar instrumento
+      </button>
+    </div>
+  </div>
+
+  <!-- ENCERRAMENTO -->
+  <div class="section">
+    <div class="section-header">Encerramento</div>
+    <div class="section-body">
+      <div class="grid-3" style="padding:12px 0">
+        <div><label class="field-label">Matrícula do Responsável Técnico</label><input type="text" id="responsavel_matricula" /></div>
+        <div><label class="field-label">Nome da Fiscalização</label><input type="text" id="assinatura_fiscalizacao" /></div>
+        <div><label class="field-label">Data de Término do Serviço</label><input type="date" id="data_termino_servico" /></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Tela de sucesso -->
+<div id="success-screen">
+  <div class="check-circle">
+    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+  </div>
+  <h2>FAE Submetida com Sucesso!</h2>
+  <p>O formulário foi enviado e está aguardando análise pela equipe de fiscalização.</p>
+  <button class="btn-submit" onclick="exitForm()" style="margin-top:8px">Voltar às OSs Pendentes</button>
+</div>
+
+<div class="submit-bar">
+  <button class="btn-exit" onclick="exitForm()">Sair</button>
+  <button class="btn-clear" onclick="clearForm()">Limpar</button>
+  <button class="btn-submit" id="btn-submit" onclick="submitForm()">Enviar Formulário</button>
+</div>
+<div id="toast"></div>
+
+<script>
+const SUPABASE_URL  = 'https://udnikmolgryzczalcbbz.supabase.co'
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkbmlrbW9sZ3J5emN6YWxjYmJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDQzNTUsImV4cCI6MjA5MDcyMDM1NX0.9vCwDkmxhrLAc-UxKpUxiVHF0BBh8OIdGZPKpTWu-lI'
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON)
+const EXECUTION_ID = new URLSearchParams(window.location.search).get('id')
+
+// ─── FORM META (auto-descritivo para renderização no React) ───────────────────
+function buildFormMeta() {
+  const relays = ['54-1','54-2','54-3','54-4']
+  const prfx   = ['541','542','543','544']
+  const mvs    = ['15','30','45','60','120']
+
+  const sections = [
+    { id:'s1', title:'Inspeção Geral — Itens 1 a 12', fields:[
+      {key:'i01',label:'1. Limpeza geral interna e externa do cubículo',type:'bool'},
+      {key:'i02',label:'2. Verificação de oxidação e corrosão nas estruturas metálicas',type:'bool'},
+      {key:'i03',label:'3. Verificação e reaperto dos terminais e conexões dos barramentos',type:'bool'},
+      {key:'i04',label:'4. Verificação do estado de conservação dos isoladores',type:'bool'},
+      {key:'i05',label:'5. Verificação do estado de conservação dos cabos e isolamentos',type:'bool'},
+      {key:'i06',label:'6. Verificação da chave seccionadora (abertura/fechamento)',type:'bool'},
+      {key:'i07',label:'7. Verificação do disjuntor (abertura/fechamento/bloqueio)',type:'bool'},
+      {key:'i08',label:'8. Verificação dos fusíveis (estado e calibre)',type:'bool'},
+      {key:'i09',label:'9. Verificação da sinalização luminosa e sonora',type:'bool'},
+      {key:'i10',label:'10. Verificação do sistema de aterramento',type:'bool'},
+      {key:'i11',label:'11. Verificação das travas de segurança e intertravamentos',type:'bool'},
+      {key:'i12',label:'12. Verificação da ventilação e temperatura interna do cubículo',type:'bool'},
+    ]},
+    { id:'s2', title:'Equipamento de Medição — Cubículos', fields:[
+      {key:'i13_temp',label:'Temperatura',type:'number',unit:'ºC'},
+      {key:'i13_umidade',label:'Umidade',type:'number',unit:'%'},
+      {key:'i13_marca',label:'Marca',type:'text'},{key:'i13_modelo',label:'Modelo',type:'text'},
+      {key:'i13_serie',label:'Número de Série',type:'text'},
+    ]},
+    { id:'s3', title:'Item 13 · Isolamento Cubículos (ref. ≥ 2 MΩ)', fields:[
+      {key:'i13_r01',label:'Col. 2-5 POSITIVO x NEGATIVO',type:'number',unit:'MΩ'},
+      {key:'i13_r02',label:'Col. 2-5 POSITIVO x MASSA',type:'number',unit:'MΩ'},
+      {key:'i13_r03',label:'Col. 2-5 NEGATIVO x MASSA',type:'number',unit:'MΩ'},
+      {key:'i13_r04',label:'Col. 2-5 MASSA x TERRA',type:'number',unit:'MΩ'},
+      {key:'i13_r05',label:'Col. 1 POSITIVO x NEGATIVO',type:'number',unit:'MΩ'},
+      {key:'i13_r06',label:'Col. 1 NEGATIVO x MASSA',type:'number',unit:'MΩ'},
+      {key:'i13_r07',label:'Col. 1 TERRA x MASSA',type:'number',unit:'MΩ'},
+      {key:'i13_r08',label:'Col. 1 MASSA x MASSA ADJ',type:'number',unit:'MΩ'},
+      {key:'i13_r09',label:'Col. 1 POSITIVO SAÍDA x TERRA',type:'number',unit:'MΩ'},
+      {key:'i13_r10',label:'Col. 1 NEGATIVO SAÍDA x TERRA',type:'number',unit:'MΩ'},
+      {key:'i13_r11',label:'Col. 6 POSITIVO x NEGATIVO',type:'number',unit:'MΩ'},
+      {key:'i13_r12',label:'Col. 6 NEGATIVO x MASSA',type:'number',unit:'MΩ'},
+      {key:'i13_r13',label:'Col. 6 TERRA x MASSA',type:'number',unit:'MΩ'},
+      {key:'i13_r14',label:'Col. 6 MASSA x MASSA ADJ',type:'number',unit:'MΩ'},
+      {key:'i13_r15',label:'Col. 6 POSITIVO SAÍDA x TERRA',type:'number',unit:'MΩ'},
+      {key:'i13_r16',label:'Col. 6 NEGATIVO SAÍDA x TERRA',type:'number',unit:'MΩ'},
+    ]},
+    { id:'s4', title:'Verificações do Disjuntor — Itens 14 a 18', fields:[
+      {key:'i14',label:'14. Verificação dos contatos auxiliares do disjuntor',type:'bool'},
+      {key:'i15',label:'15. Verificação da bobina de abertura do disjuntor',type:'bool'},
+      {key:'i16',label:'16. Verificação da bobina de fechamento do disjuntor',type:'bool'},
+      {key:'i17',label:'17. Verificação do motor de carregamento da mola',type:'bool'},
+      {key:'i18',label:'18. Verificação dos contadores de manobra',type:'bool'},
+    ]},
+    { id:'s5', title:'Equipamento de Medição — Para Raios', fields:[
+      {key:'i19_temp',label:'Temperatura',type:'number',unit:'ºC'},
+      {key:'i19_umidade',label:'Umidade',type:'number',unit:'%'},
+      {key:'i19_marca',label:'Marca',type:'text'},{key:'i19_modelo',label:'Modelo',type:'text'},
+      {key:'i19_serie',label:'Número de Série',type:'text'},
+    ]},
+    { id:'s6', title:'Item 19 · Isolamento Para-Raios (ref. ≥ 2 MΩ)', fields:[
+      {key:'i19_r01',label:'F(63) NEGATIVO-TERRA 1,0 kV',type:'number',unit:'MΩ'},
+      {key:'i19_r02',label:'F(63) NEGATIVO-TERRA 2,5 kV',type:'number',unit:'MΩ'},
+      {key:'i19_r03',label:'F(63) NEGATIVO-TERRA 5,0 kV',type:'number',unit:'MΩ'},
+      {key:'i19_r04',label:'F(64) POSITIVO-TERRA 1,0 kV',type:'number',unit:'MΩ'},
+      {key:'i19_r05',label:'F(64) POSITIVO-TERRA 2,5 kV',type:'number',unit:'MΩ'},
+      {key:'i19_r06',label:'F(64) POSITIVO-TERRA 5,0 kV',type:'number',unit:'MΩ'},
+      {key:'i19_r07',label:'F(65) POSITIVO-TERRA 1,0 kV',type:'number',unit:'MΩ'},
+      {key:'i19_r08',label:'F(65) POSITIVO-TERRA 2,5 kV',type:'number',unit:'MΩ'},
+      {key:'i19_r09',label:'F(65) POSITIVO-TERRA 5,0 kV',type:'number',unit:'MΩ'},
+      {key:'i19_r10',label:'F(13) NEGATIVO-TERRA 1,0 kV',type:'number',unit:'MΩ'},
+      {key:'i19_r11',label:'F(13) NEGATIVO-TERRA 2,5 kV',type:'number',unit:'MΩ'},
+      {key:'i19_r12',label:'F(13) NEGATIVO-TERRA 5,0 kV',type:'number',unit:'MΩ'},
+      {key:'i19_r13',label:'F(14) POSITIVO-TERRA 1,0 kV',type:'number',unit:'MΩ'},
+      {key:'i19_r14',label:'F(14) POSITIVO-TERRA 2,5 kV',type:'number',unit:'MΩ'},
+      {key:'i19_r15',label:'F(14) POSITIVO-TERRA 5,0 kV',type:'number',unit:'MΩ'},
+      {key:'i19_r16',label:'F(15) POSITIVO-TERRA 1,0 kV',type:'number',unit:'MΩ'},
+      {key:'i19_r17',label:'F(15) POSITIVO-TERRA 2,5 kV',type:'number',unit:'MΩ'},
+      {key:'i19_r18',label:'F(15) POSITIVO-TERRA 5,0 kV',type:'number',unit:'MΩ'},
+    ]},
+    { id:'s7', title:'Verificação de Proteções — Itens 20 a 28', fields:[
+      {key:'i20',label:'20. Verificação dos relés de proteção',type:'bool'},
+      {key:'i21',label:'21. Verificação dos transformadores de corrente (TC)',type:'bool'},
+      {key:'i22',label:'22. Verificação dos transformadores de potencial (TP)',type:'bool'},
+      {key:'i23',label:'23. Verificação dos amperímetros e voltímetros',type:'bool'},
+      {key:'i24',label:'24. Verificação do wattímetro e medidor de energia',type:'bool'},
+      {key:'i25',label:'25. Verificação da proteção contra sobrecorrente',type:'bool'},
+      {key:'i26',label:'26. Verificação da proteção contra falta à terra',type:'bool'},
+      {key:'i27',label:'27. Verificação da proteção diferencial',type:'bool'},
+      {key:'i28',label:'28. Teste de injeção de corrente nos relés',type:'bool'},
+    ]},
+    { id:'s8', title:'Equipamento de Medição — Seccionadoras e Cabos', fields:[
+      {key:'i2931_temp',label:'Temperatura',type:'number',unit:'ºC'},
+      {key:'i2931_umidade',label:'Umidade',type:'number',unit:'%'},
+      {key:'i2931_marca1',label:'Instrumento 1 — Marca',type:'text'},{key:'i2931_modelo1',label:'Instrumento 1 — Modelo',type:'text'},{key:'i2931_serie1',label:'Instrumento 1 — Nº Série',type:'text'},
+      {key:'i2931_marca2',label:'Instrumento 2 — Marca',type:'text'},{key:'i2931_modelo2',label:'Instrumento 2 — Modelo',type:'text'},{key:'i2931_serie2',label:'Instrumento 2 — Nº Série',type:'text'},
+    ]},
+    { id:'s9', title:'Item 29 · Isolamento Seccionadoras (ref. ≥ 2 MΩ)', fields:[
+      {key:'i29_r01',label:'Seccionadora Negativa Via (89.8)',type:'number',unit:'MΩ'},
+      {key:'i29_r02',label:'Seccionadora Negativa Via (89.13)',type:'number',unit:'MΩ'},
+      {key:'i29_r03',label:'Seccionadora Positiva (89.9)',type:'number',unit:'MΩ'},
+      {key:'i29_r04',label:'Seccionadora Positiva (89.10)',type:'number',unit:'MΩ'},
+      {key:'i29_r05',label:'Seccionadora Positiva (89.11)',type:'number',unit:'MΩ'},
+      {key:'i29_r06',label:'Seccionadora Positiva (89.12)',type:'number',unit:'MΩ'},
+    ]},
+    { id:'s10', title:'Item 30 · Contatos Seccionadoras (ref. ≤ 60 μΩ)', fields:[
+      {key:'i30_r01_med',label:'Contatos Sec. Neg. Via (89.8) — Medido',type:'number',unit:'μΩ'},
+      {key:'i30_r01_dei',label:'Contatos Sec. Neg. Via (89.8) — Deixado',type:'number',unit:'μΩ'},
+      {key:'i30_r02_med',label:'Contatos Sec. Neg. Via (89.13) — Medido',type:'number',unit:'μΩ'},
+      {key:'i30_r02_dei',label:'Contatos Sec. Neg. Via (89.13) — Deixado',type:'number',unit:'μΩ'},
+      {key:'i30_r03_med',label:'Contatos Sec. Pos. (89.9) — Medido',type:'number',unit:'μΩ'},
+      {key:'i30_r03_dei',label:'Contatos Sec. Pos. (89.9) — Deixado',type:'number',unit:'μΩ'},
+      {key:'i30_r04_med',label:'Contatos Sec. Pos. (89.10) — Medido',type:'number',unit:'μΩ'},
+      {key:'i30_r04_dei',label:'Contatos Sec. Pos. (89.10) — Deixado',type:'number',unit:'μΩ'},
+      {key:'i30_r05_med',label:'Contatos Sec. Pos. (89.11) — Medido',type:'number',unit:'μΩ'},
+      {key:'i30_r05_dei',label:'Contatos Sec. Pos. (89.11) — Deixado',type:'number',unit:'μΩ'},
+      {key:'i30_r06_med',label:'Contatos Sec. Pos. (89.12) — Medido',type:'number',unit:'μΩ'},
+      {key:'i30_r06_dei',label:'Contatos Sec. Pos. (89.12) — Deixado',type:'number',unit:'μΩ'},
+    ]},
+    { id:'s11', title:'Item 31 · Isolamento Cabos de Alimentação (ref. ≥ 2 MΩ)', fields:[
+      {key:'i31_r01',label:'Condutor Negativa (89.8)',type:'number',unit:'MΩ'},
+      {key:'i31_r02',label:'Condutor Negativa (89.13)',type:'number',unit:'MΩ'},
+      {key:'i31_r03',label:'Condutor Positiva (89.9)',type:'number',unit:'MΩ'},
+      {key:'i31_r04',label:'Condutor Positiva (89.10)',type:'number',unit:'MΩ'},
+      {key:'i31_r05',label:'Condutor Positiva (89.11)',type:'number',unit:'MΩ'},
+      {key:'i31_r06',label:'Condutor Positiva (89.12)',type:'number',unit:'MΩ'},
+    ]},
+    { id:'s12', title:'Verificações de Controle — Itens 32 a 35', fields:[
+      {key:'i32',label:'32. Verificação do sistema de controle e supervisão',type:'bool'},
+      {key:'i33',label:'33. Verificação das chaves de seleção e botoeiras',type:'bool'},
+      {key:'i34',label:'34. Verificação do cabeamento de controle e potência',type:'bool'},
+      {key:'i35',label:'35. Verificação da proteção física do cubículo',type:'bool'},
+    ]},
+    { id:'s13', title:'Aterramento e Temperatura — Itens 36 e 37', fields:[
+      {key:'i36',label:'36. Resistência de aterramento',type:'number',unit:'Ω'},
+      {key:'i37',label:'37. Temperatura dos barramentos em carga',type:'number',unit:'°C'},
+    ]},
+    { id:'s14eq', title:'Item 38 · Relé 64V — Equipamento', fields:[
+      {key:'i38_marca',label:'Marca / Modelo',type:'text'},
+      {key:'i38_serie',label:'Número de Série',type:'text'},
+    ]},
+  ]
+
+  // Relé 64V — tabelas por relé
+  relays.forEach((label, i) => {
+    const p = `i38_${prfx[i]}`
+    sections.push({ id:`s14_${prfx[i]}`, title:`Item 38 · Relé 64V — ${label}`, fields:[
+      {key:`${p}_r_op_aj`,label:'R de Operação — Ajustado',type:'number',unit:'kΩ'},
+      {key:`${p}_r_op_med`,label:'R de Operação — Medido',type:'number',unit:'kΩ'},
+      {key:`${p}_v_ref_aj`,label:'Tensão de Referência — Ajustada',type:'number',unit:'V'},
+      {key:`${p}_v_ref_med`,label:'Tensão de Referência — Medida',type:'number',unit:'V'},
+      {key:`${p}_atuacao`,label:'Verificação de Atuação',type:'text'},
+      {key:`${p}_retorno`,label:'Verificação de Retorno',type:'text'},
+    ]})
+  })
+
+  sections.push({ id:'s15', title:'Item 39 · Temporizador', fields:[
+    {key:'i39',label:'39. Verificação do temporizador de religamento automático',type:'bool'},
+  ]})
+  sections.push({ id:'s16eq', title:'Item 40 · DIA-IGT — Equipamento', fields:[
+    {key:'i40_marca',label:'Marca / Modelo',type:'text'},
+    {key:'i40_serie',label:'Número de Série',type:'text'},
+  ]})
+
+  // DIA-IGT — tabelas por relé
+  relays.forEach((label, i) => {
+    const p = `i40_${prfx[i]}`
+    sections.push({ id:`s16_${prfx[i]}`, title:`Item 40 · DIA-IGT — ${label}`, fields:[
+      {key:`${p}_pickup_aj`,label:'Corrente de Pickup — Ajustada',type:'number',unit:'A'},
+      {key:`${p}_pickup_med`,label:'Corrente de Pickup — Medida',type:'number',unit:'A'},
+      {key:`${p}_retardo_aj`,label:'Tempo de Retardo — Ajustado',type:'number',unit:'ms'},
+      {key:`${p}_retardo_med`,label:'Tempo de Retardo — Medido',type:'number',unit:'ms'},
+      {key:`${p}_atuacao`,label:'Verificação de Atuação',type:'text'},
+      {key:`${p}_retorno`,label:'Verificação de Retorno',type:'text'},
+      {key:`${p}_bloqueio`,label:'Verificação de Bloqueio',type:'text'},
+    ]})
+  })
+
+  sections.push({ id:'s17eq', title:'Item 41 · Leitura DIA-IGT — Equipamento', fields:[
+    {key:'i41_marca',label:'Marca / Modelo',type:'text'},
+    {key:'i41_serie',label:'Número de Série',type:'text'},
+  ]})
+
+  // Leitura DIA-IGT — por relé e seção
+  relays.forEach((label, i) => {
+    const p = `i41_${prfx[i]}`
+    ;[['filtro','FILTRO LC'],['tx1','Transdutor X1'],['tx10','Transdutor X10']].forEach(([sec, secLabel]) => {
+      sections.push({ id:`s17_${prfx[i]}_${sec}`, title:`Item 41 · DIA-IGT ${label} — ${secLabel}`, fields:
+        mvs.map(mv => ({key:`${p}_${sec}_${mv}mv`, label:`${mv} mV`, type:'number', unit:'A'}))
+      })
+    })
+  })
+
+  sections.push({ id:'s18', title:'Comentários e Observações', fields:[
+    {key:'comentarios',label:'Observações',type:'text'},
+  ]})
+  sections.push({ id:'s19', title:'Encerramento', fields:[
+    {key:'responsavel_matricula',label:'Matrícula do Responsável Técnico',type:'text'},
+    {key:'assinatura_fiscalizacao',label:'Nome da Fiscalização',type:'text'},
+    {key:'data_termino_servico',label:'Data de Término do Serviço',type:'text'},
+  ]})
+
+  return { form_title:'Cubículo Blindado 1,0KVCC — Manutenção Anual', sections }
+}
+const FORM_META = buildFormMeta()
+
+// ─── BOOLEAN GROUPS ───────────────────────────────────────────────────────────
+const BOOL_GROUPS = {
+  'bool-group-1':[
+    {id:'i01',label:'1. Limpeza geral interna e externa do cubículo'},
+    {id:'i02',label:'2. Verificação de oxidação e corrosão nas estruturas metálicas'},
+    {id:'i03',label:'3. Verificação e reaperto dos terminais e conexões dos barramentos'},
+    {id:'i04',label:'4. Verificação do estado de conservação dos isoladores'},
+    {id:'i05',label:'5. Verificação do estado de conservação dos cabos e isolamentos'},
+    {id:'i06',label:'6. Verificação da chave seccionadora (abertura/fechamento)'},
+    {id:'i07',label:'7. Verificação do disjuntor (abertura/fechamento/bloqueio)'},
+    {id:'i08',label:'8. Verificação dos fusíveis (estado e calibre)'},
+    {id:'i09',label:'9. Verificação da sinalização luminosa e sonora'},
+    {id:'i10',label:'10. Verificação do sistema de aterramento'},
+    {id:'i11',label:'11. Verificação das travas de segurança e intertravamentos'},
+    {id:'i12',label:'12. Verificação da ventilação e temperatura interna do cubículo'},
+  ],
+  'bool-group-2':[
+    {id:'i14',label:'14. Verificação dos contatos auxiliares do disjuntor'},
+    {id:'i15',label:'15. Verificação da bobina de abertura do disjuntor'},
+    {id:'i16',label:'16. Verificação da bobina de fechamento do disjuntor'},
+    {id:'i17',label:'17. Verificação do motor de carregamento da mola'},
+    {id:'i18',label:'18. Verificação dos contadores de manobra'},
+  ],
+  'bool-group-3':[
+    {id:'i20',label:'20. Verificação dos relés de proteção (ajustes e parametrização)'},
+    {id:'i21',label:'21. Verificação dos transformadores de corrente (TC)'},
+    {id:'i22',label:'22. Verificação dos transformadores de potencial (TP)'},
+    {id:'i23',label:'23. Verificação dos amperímetros e voltímetros'},
+    {id:'i24',label:'24. Verificação do wattímetro e medidor de energia'},
+    {id:'i25',label:'25. Verificação do sistema de proteção contra sobrecorrente'},
+    {id:'i26',label:'26. Verificação do sistema de proteção contra falta à terra'},
+    {id:'i27',label:'27. Verificação do sistema de proteção diferencial'},
+    {id:'i28',label:'28. Teste de injeção de corrente nos relés de proteção'},
+  ],
+  'bool-group-4':[
+    {id:'i32',label:'32. Verificação do sistema de controle e supervisão'},
+    {id:'i33',label:'33. Verificação das chaves de seleção e botoeiras'},
+    {id:'i34',label:'34. Verificação do cabeamento de controle e potência'},
+    {id:'i35',label:'35. Verificação da proteção física do cubículo (portas, painéis)'},
+  ],
+  'bool-group-5':[
+    {id:'i39',label:'39. Verificação do temporizador de religamento automático'},
+  ],
+}
+const boolValues = {}
+
+function renderBoolGroups() {
+  for (const [gid, items] of Object.entries(BOOL_GROUPS)) {
+    const el = document.getElementById(gid)
+    if (!el) continue
+    el.innerHTML = items.map(item => `
+      <div class="bool-row">
+        <span class="bool-label">${item.label}</span>
+        <div class="bool-btns">
+          <button class="bool-btn sim" data-id="${item.id}" data-val="Sim" onclick="setBool(this)">SIM</button>
+          <button class="bool-btn nao" data-id="${item.id}" data-val="Não" onclick="setBool(this)">NÃO</button>
+          <button class="bool-btn na"  data-id="${item.id}" data-val="N/A" onclick="setBool(this)">N/A</button>
+        </div>
+      </div>`).join('')
+  }
+}
+function setBool(btn) {
+  const id = btn.dataset.id, v = btn.dataset.val
+  boolValues[id] = v
+  document.querySelectorAll(`.bool-btn[data-id="${id}"]`).forEach(b => b.classList.remove('active'))
+  btn.classList.add('active')
+}
+
+// ─── RELÉ 64V ────────────────────────────────────────────────────────────────
+function renderRele64V() {
+  const relays=['54-1','54-2','54-3','54-4'], prfx=['541','542','543','544']
+  let html=''
+  relays.forEach((label,i)=>{
+    const p=`i38_${prfx[i]}`
+    html+=`<div class="sub-title">Relé 64V — ${label}</div>
+    <table class="relay-table"><thead><tr><th>Parâmetro</th><th>Ajustado</th><th>Medido</th><th>Verificação</th></tr></thead><tbody>
+      <tr><td>R de Operação (kΩ)</td><td><input type="number" id="${p}_r_op_aj" step="any"/></td><td><input type="number" id="${p}_r_op_med" step="any"/></td><td></td></tr>
+      <tr><td>Tensão de Referência (V)</td><td><input type="number" id="${p}_v_ref_aj" step="any"/></td><td><input type="number" id="${p}_v_ref_med" step="any"/></td><td></td></tr>
+      <tr><td>Verificação de Atuação</td><td colspan="2"></td><td><select id="${p}_atuacao"><option value="">—</option><option>OK</option><option>FALHA</option></select></td></tr>
+      <tr><td>Verificação de Retorno</td><td colspan="2"></td><td><select id="${p}_retorno"><option value="">—</option><option>OK</option><option>FALHA</option></select></td></tr>
+    </tbody></table>`
+  })
+  document.getElementById('rele64v-tables').innerHTML=html
+}
+
+// ─── DIA-IGT ─────────────────────────────────────────────────────────────────
+function renderDiaIgt() {
+  const relays=['54-1','54-2','54-3','54-4'], prfx=['541','542','543','544']
+  let html=''
+  relays.forEach((label,i)=>{
+    const p=`i40_${prfx[i]}`
+    html+=`<div class="sub-title">DIA-IGT ${label}</div>
+    <table class="relay-table"><thead><tr><th>Parâmetro</th><th>Ajustado</th><th>Medido</th><th>Verificação</th></tr></thead><tbody>
+      <tr><td>Corrente de Pickup (A)</td><td><input type="number" id="${p}_pickup_aj" step="any"/></td><td><input type="number" id="${p}_pickup_med" step="any"/></td><td></td></tr>
+      <tr><td>Tempo de retardo (ms)</td><td><input type="number" id="${p}_retardo_aj" step="any"/></td><td><input type="number" id="${p}_retardo_med" step="any"/></td><td></td></tr>
+      <tr><td>Verificação de Atuação</td><td colspan="2"></td><td><select id="${p}_atuacao"><option value="">—</option><option>OK</option><option>FALHA</option></select></td></tr>
+      <tr><td>Verificação de Retorno</td><td colspan="2"></td><td><select id="${p}_retorno"><option value="">—</option><option>OK</option><option>FALHA</option></select></td></tr>
+      <tr><td>Verificação de Bloqueio</td><td colspan="2"></td><td><select id="${p}_bloqueio"><option value="">—</option><option>OK</option><option>FALHA</option></select></td></tr>
+    </tbody></table>`
+  })
+  document.getElementById('diagt-tables').innerHTML=html
+}
+
+// ─── LEITURA DIA-IGT ─────────────────────────────────────────────────────────
+function renderLeitura() {
+  const relays=['54-1','54-2','54-3','54-4'], prfx=['541','542','543','544']
+  const mvs=['15','30','45','60','120']
+  let html=''
+  relays.forEach((label,i)=>{
+    const p=`i41_${prfx[i]}`
+    html+=`<div class="sub-title">DIA-IGT ${label}</div>`
+    ;[['filtro','FILTRO LC — Terminais 11 e 12'],['tx1','Transdutor X1 — Terminais 19 e 20'],['tx10','Transdutor X10 — Terminais 19 e 20']].forEach(([sec,secLabel])=>{
+      html+=`<p style="font-size:12px;font-weight:600;color:#64748b;margin:8px 0 4px">${secLabel}</p>`
+      html+=`<table class="relay-table"><thead><tr><th>Tensão Injetada (mV)</th><th>Relé DIA IGT (A)</th></tr></thead><tbody>`
+      mvs.forEach(mv=>{ html+=`<tr><td>${mv} mV</td><td><input type="number" id="${p}_${sec}_${mv}mv" step="any"/></td></tr>` })
+      html+=`</tbody></table>`
+    })
+  })
+  document.getElementById('leitura-tables').innerHTML=html
+}
+
+// ─── EXECUTANTES ─────────────────────────────────────────────────────────────
+let execCount=0
+function execRowHtml(n) {
+  const nn=String(n).padStart(2,'0')
+  return `<div class="exec-grid" id="exec-row-${nn}">
+    <div><span class="exec-num">Executante ${n}</span><input type="text" id="exec_${nn}_matricula" placeholder="Matrícula"/></div>
+    <input type="datetime-local" id="exec_${nn}_inicio"/>
+    <input type="datetime-local" id="exec_${nn}_fim"/>
+    <button type="button" onclick="removeExecutante('${nn}')" style="align-self:flex-end;margin-bottom:2px;background:none;border:none;cursor:pointer;color:#cbd5e1;font-size:18px;line-height:1;padding:4px;border-radius:6px" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#cbd5e1'">×</button>
+  </div>`
+}
+function renderExecutantes() { document.getElementById('executantes').innerHTML=''; execCount=0; for(let n=1;n<=3;n++) addExecutante() }
+function addExecutante() { execCount++; document.getElementById('executantes').insertAdjacentHTML('beforeend',execRowHtml(execCount)) }
+function removeExecutante(nn) { const r=document.getElementById(`exec-row-${nn}`); if(r) r.remove() }
+
+// ─── INSTRUMENTOS ─────────────────────────────────────────────────────────────
+let instrCount=0
+function instrRowHtml(n) {
+  return `<div class="instr-row" id="instr-row-${n}">
+    <input type="text" id="instr_${n}_nome" placeholder="Instrumento ${n}"/>
+    <input type="text" id="instr_${n}_tag" placeholder="TAG"/>
+    <button type="button" onclick="removeInstrumento(${n})" style="align-self:center;background:none;border:none;cursor:pointer;color:#cbd5e1;font-size:18px;line-height:1;padding:4px;border-radius:6px" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#cbd5e1'">×</button>
+  </div>`
+}
+function renderInstrumentos() { document.getElementById('instrumentos').innerHTML=''; instrCount=0; for(let n=1;n<=3;n++) addInstrumento() }
+function addInstrumento() { instrCount++; document.getElementById('instrumentos').insertAdjacentHTML('beforeend',instrRowHtml(instrCount)) }
+function removeInstrumento(n) { const r=document.getElementById(`instr-row-${n}`); if(r) r.remove() }
+
+// ─── LOAD EXECUTION ──────────────────────────────────────────────────────────
+async function loadExecution() {
+  if (!EXECUTION_ID) {
+    document.getElementById('btn-submit').disabled=true
+    showToast('Acesso inválido. Abra este formulário pelo link gerado na OS.','error')
+    return
+  }
+  try {
+    const {data,error} = await sb.from('maintenance_executions')
+      .select('id,os_number,psa_item,scheduled_date,locality_id,status,locality:localities(id,name),plan:maintenance_plans(id,title)')
+      .eq('id',EXECUTION_ID).single()
+    if (error||!data) { showToast('OS não encontrada. Verifique o link.','error'); document.getElementById('btn-submit').disabled=true; return }
+    if (data.status!=='pendente') {
+      document.querySelectorAll('input,select,textarea,button.bool-btn').forEach(el=>el.disabled=true)
+      document.querySelector('.submit-bar').style.display='none'
+      document.getElementById('success-screen').style.display='flex'
+      document.getElementById('success-screen').querySelector('h2').textContent='Formulário já submetido'
+      document.getElementById('success-screen').querySelector('p').textContent='Este formulário já foi enviado anteriormente e não pode ser editado novamente.'
+      return
+    }
+    // Verificação adicional: checa se já há submissão registrada
+    const {data:subs}=await sb.from('form_submissions').select('id').eq('execution_id',EXECUTION_ID).limit(1)
+    if(subs && subs.length>0){
+      document.querySelectorAll('input,select,textarea,button.bool-btn').forEach(el=>el.disabled=true)
+      document.querySelector('.submit-bar').style.display='none'
+      document.getElementById('success-screen').style.display='flex'
+      document.getElementById('success-screen').querySelector('h2').textContent='Formulário já submetido'
+      document.getElementById('success-screen').querySelector('p').textContent='Este formulário já foi enviado anteriormente.'
+      return
+    }
+    const lock=(id,value)=>{ const el=document.getElementById(id); if(!el) return; el.value=value??''; el.readOnly=true; el.style.background='#f8fafc'; el.style.color='#64748b' }
+    lock('os_number',data.os_number)
+    lock('psa_item',data.psa_item)
+    lock('scheduled_date', data.scheduled_date ? data.scheduled_date.slice(0,10) : '')
+    if (data.plan?.title) lock('plan_title',data.plan.title)
+    const sel=document.getElementById('locality_id')
+    if (data.locality) sel.innerHTML=`<option value="${data.locality.id}">${data.locality.name}</option>`
+    else sel.innerHTML='<option value="">—</option>'
+    sel.disabled=true
+    const badge=document.createElement('span')
+    badge.style.cssText='font-size:11px;background:rgba(255,255,255,.18);border-radius:6px;padding:2px 8px;margin-left:8px;font-weight:600'
+    badge.textContent=`OS: ${data.os_number??'—'}`
+    document.getElementById('header-info').appendChild(badge)
+  } catch(e) { showToast('Erro ao carregar a OS: '+(e.message??''),'error'); document.getElementById('btn-submit').disabled=true }
+}
+
+// ─── COLLECT DATA ────────────────────────────────────────────────────────────
+function val(id) {
+  const el=document.getElementById(id); if(!el) return null
+  if(el.type==='number') return el.value===''?null:parseFloat(el.value)
+  return el.value||null
+}
+
+function collectFormData() {
+  // Booleans primeiro (vêm dos botões SIM/NÃO/N/A, sem <input> no DOM)
+  const d={...boolValues}
+
+  // Campos não-bool do FORM_META (não sobrescrever booleans)
+  FORM_META.sections.forEach(sec=>{
+    sec.fields.forEach(f=>{ if(f.type!=='bool') d[f.key]=val(f.key) })
+  })
+
+  // Campos relay dinâmicos (itens 38, 40, 41 — gerados via renderRele64V/DiaIgt/Leitura)
+  const prfx=['541','542','543','544']
+  prfx.forEach(r=>{
+    ;[`i38_${r}_r_op_aj`,`i38_${r}_r_op_med`,`i38_${r}_v_ref_aj`,`i38_${r}_v_ref_med`].forEach(id=>{ d[id]=val(id) })
+    d[`i38_${r}_atuacao`]=val(`i38_${r}_atuacao`); d[`i38_${r}_retorno`]=val(`i38_${r}_retorno`)
+    ;[`i40_${r}_pickup_aj`,`i40_${r}_pickup_med`,`i40_${r}_retardo_aj`,`i40_${r}_retardo_med`].forEach(id=>{ d[id]=val(id) })
+    d[`i40_${r}_atuacao`]=val(`i40_${r}_atuacao`); d[`i40_${r}_retorno`]=val(`i40_${r}_retorno`); d[`i40_${r}_bloqueio`]=val(`i40_${r}_bloqueio`)
+    ;['filtro','tx1','tx10'].forEach(sec=>{
+      ;['15','30','45','60','120'].forEach(mv=>{ d[`i41_${r}_${sec}_${mv}mv`]=val(`i41_${r}_${sec}_${mv}mv`) })
+    })
+  })
+
+  // Executantes dinâmicos
+  const executantes=[]
+  document.querySelectorAll('[id^="exec-row-"]').forEach(row=>{
+    const nn=row.id.replace('exec-row-','')
+    const m=val(`exec_${nn}_matricula`), s=val(`exec_${nn}_inicio`), f=val(`exec_${nn}_fim`)
+    if(m||s||f) executantes.push({matricula:m,inicio:s,fim:f})
+  })
+  d._executantes=executantes
+
+  // Instrumentos dinâmicos
+  const instrumentos=[]
+  document.querySelectorAll('[id^="instr-row-"]').forEach(row=>{
+    const n=row.id.replace('instr-row-','')
+    const nome=val(`instr_${n}_nome`), tag=val(`instr_${n}_tag`)
+    if(nome||tag) instrumentos.push({nome,tag})
+  })
+  d._instrumentos=instrumentos
+
+  return d
+}
+
+// ─── SUBMIT ──────────────────────────────────────────────────────────────────
+async function submitForm() {
+  if (!EXECUTION_ID) { showToast('Acesso inválido.','error'); return }
+  const btn=document.getElementById('btn-submit')
+  btn.disabled=true; btn.textContent='Enviando...'
+  try {
+    const formData = collectFormData()
+
+    // 1. Atualiza a execução com os dados mais recentes
+    const {data:rows, error}=await sb.from('maintenance_executions')
+      .update({form_data: formData, status:'recebido'})
+      .eq('id',EXECUTION_ID).eq('status','pendente')
+      .select('id')
+    if(error) throw error
+    if(!rows || rows.length===0) throw new Error('Formulário não pôde ser salvo. A OS pode já ter sido enviada ou você não tem permissão.')
+
+    // 2. Registra a submissão para histórico comparativo
+    await sb.from('form_submissions').insert({
+      execution_id: EXECUTION_ID,
+      form_key: FORM_KEY,
+      form_data: formData,
+    })
+    document.querySelector('.submit-bar').style.display='none'
+    document.getElementById('success-screen').style.display='flex'
+  } catch(e) {
+    showToast('Erro ao enviar: '+(e.message??'Verifique a conexão.'),'error')
+    btn.disabled=false; btn.textContent='Enviar Formulário'
+  }
+}
+
+function exitForm() {
+  window.location.href = window.location.origin + '/field/pending'
+}
+
+// ─── CLEAR ───────────────────────────────────────────────────────────────────
+function clearForm() {
+  document.querySelectorAll('input,textarea,select').forEach(el=>{ if(el.readOnly||el.disabled) return; el.value='' })
+  document.querySelectorAll('.bool-btn').forEach(b=>b.classList.remove('active'))
+  Object.keys(boolValues).forEach(k=>delete boolValues[k])
+}
+
+// ─── TOAST ───────────────────────────────────────────────────────────────────
+function showToast(msg,type) {
+  const t=document.getElementById('toast')
+  t.textContent=msg; t.className=type; t.style.display='block'
+  setTimeout(()=>{ t.style.display='none' },5000)
+}
+
+// ─── REGISTER METADATA ───────────────────────────────────────────────────────
+const FORM_KEY = 'cubiculo-blindado-1kvcc'
+
+async function registerFormMetadata() {
+  const fields = []
+  FORM_META.sections.forEach(sec => {
+    const refMatch = sec.title.match(/(≥|≤|>|<)\s*([\d.,]+)\s*([^\s)]+)?/)
+    const ref = refMatch ? `${refMatch[1]} ${refMatch[2]}${refMatch[3] ? ' ' + refMatch[3] : ''}`.trim() : null
+    sec.fields.forEach(f => {
+      fields.push({
+        key:     f.key,
+        label:   f.label,
+        section: sec.title,
+        type:    f.type,
+        unit:    f.unit || null,
+        ref:     (f.type !== 'bool' && ref) ? ref : null,
+      })
+    })
+  })
+  try {
+    await sb.from('form_field_metadata').upsert(
+      { form_key: FORM_KEY, title: FORM_META.form_title, fields, updated_at: new Date().toISOString() },
+      { onConflict: 'form_key' }
+    )
+  } catch(e) { console.warn('Metadata registration failed:', e) }
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  renderBoolGroups(); renderRele64V(); renderDiaIgt(); renderLeitura()
+  renderExecutantes(); renderInstrumentos()
+  registerFormMetadata()
+  loadExecution()
+})
+</script>
+</body>
+</html>

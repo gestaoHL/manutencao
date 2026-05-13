@@ -12,7 +12,7 @@ export function useContracts() {
     queryFn: async (): Promise<Contract[]> => {
       let query = supabase
         .from('contracts')
-        .select('*, contractor:profiles!contractor_profile_id(id,full_name,company_name)')
+        .select('*, contractor:profiles!contractor_profile_id(id,full_name,company_name), commitment_notes(valor_empenhado), budget_executions(valor_pago)')
         .order('created_at', { ascending: false })
 
       if (profile?.role === 'contratada') {

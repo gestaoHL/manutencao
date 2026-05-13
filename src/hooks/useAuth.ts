@@ -30,7 +30,7 @@ export function useAuth(): AuthState {
   async function loadProfile(userId: string) {
     const { data } = await supabase
       .from('profiles')
-      .select('*')
+      .select('*, company:companies(id,name)')
       .eq('user_id', userId)
       .single()
     setProfile(data ?? null)

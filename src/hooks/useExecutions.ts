@@ -3,34 +3,28 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from './useAuth'
 import type { MaintenanceExecution, PlanType, ExecutionStatus } from '@/types'
 
+const METRO_DF_NAME = 'METRÔ-DF'
+
+function isMetroDF(profile: { company?: { name: string } | null } | null) {
+  return !profile?.company || profile.company.name === METRO_DF_NAME
+}
+
 export function useExecutions(planType?: PlanType) {
   const { profile } = useAuth()
 
   return useQuery({
-    queryKey: ['executions', planType, profile?.id, profile?.role],
+    queryKey: ['executions', planType, profile?.id, profile?.role, profile?.company_id],
     queryFn: async (): Promise<MaintenanceExecution[]> => {
       let query = supabase
         .from('maintenance_executions')
-        .select('*, plan:maintenance_plans(id,title,plan_type), asset:assets(id,name,location)')
+        .select('*, plan:maintenance_plans(id,title,plan_type,template_fields,form_url,company_id), locality:localities(id,name), asset:assets(id,name,location), equipment:equipment(id,name,tag)')
         .order('created_at', { ascending: false })
 
       if (planType) query = query.eq('plan_type', planType)
 
-      if (profile?.role === 'contratada') {
-        const contractsRes = await supabase
-          .from('contracts')
-          .select('id')
-          .eq('contractor_profile_id', profile.id)
-        const contractIds = (contractsRes.data ?? []).map(c => c.id)
-        if (contractIds.length === 0) return []
-
-        const assetsRes = await supabase
-          .from('assets')
-          .select('id')
-          .in('contract_id', contractIds)
-        const ids = (assetsRes.data ?? []).map(a => a.id)
-        if (ids.length === 0) return []
-        query = query.in('asset_id', ids)
+      // Filtra por empresa do usuário, exceto METRÔ-DF que vê tudo
+      if (!isMetroDF(profile) && profile?.company_id) {
+        query = query.eq('plan.company_id', profile.company_id)
       }
 
       const { data, error } = await query
@@ -47,7 +41,7 @@ export function useExecution(id: string) {
     queryFn: async (): Promise<MaintenanceExecution> => {
       const { data, error } = await supabase
         .from('maintenance_executions')
-        .select('*, plan:maintenance_plans(id,title,plan_type), asset:assets(id,name,location)')
+        .select('*, plan:maintenance_plans(id,title,plan_type,template_fields), locality:localities(id,name), asset:assets(id,name,location), equipment:equipment(id,name,tag)')
         .eq('id', id)
         .single()
       if (error) throw error
@@ -62,17 +56,59 @@ export function useSubmitExecution() {
   return useMutation({
     mutationFn: async (data: {
       plan_id: string
-      asset_id: string
+      company_id: string
+      equipment_id: string
+      asset_id?: string | null
+      locality_id: string
       plan_type: PlanType
       os_number: string
       psa_item: string
+      scheduled_date: string
       form_data: Record<string, unknown>
     }) => {
       const { error } = await supabase.from('maintenance_executions').insert({
         ...data,
         status: 'pendente',
-        scheduled_date: new Date().toISOString(),
       })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['executions'] }),
+  })
+}
+
+export function useCreateDraftExecution() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (data: {
+      plan_id: string
+      company_id: string
+      equipment_id: string
+      locality_id: string
+      plan_type: PlanType
+      os_number: string
+      psa_item: string
+      scheduled_date: string
+    }): Promise<string> => {
+      const { data: row, error } = await supabase
+        .from('maintenance_executions')
+        .insert({ ...data, status: 'pendente', form_data: {} })
+        .select('id')
+        .single()
+      if (error) throw error
+      return row.id as string
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['executions'] }),
+  })
+}
+
+export function useSubmitExecutionForm() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, form_data }: { id: string; form_data: Record<string, unknown> }) => {
+      const { error } = await supabase
+        .from('maintenance_executions')
+        .update({ form_data, status: 'em_analise' })
+        .eq('id', id)
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['executions'] }),
@@ -82,14 +118,29 @@ export function useSubmitExecution() {
 export function useUpdateExecutionStatus() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, status, rejection_reason }: { id: string; status: ExecutionStatus; rejection_reason?: string }) => {
+    mutationFn: async ({ id, status, rejection_reason, internal_notes }: { id: string; status: ExecutionStatus; rejection_reason?: string; internal_notes?: string }) => {
       const { error } = await supabase
         .from('maintenance_executions')
-        .update({ status, ...(rejection_reason ? { rejection_reason } : {}) })
+        .update({ status, ...(rejection_reason ? { rejection_reason } : {}), ...(internal_notes !== undefined ? { internal_notes } : {}) })
         .eq('id', id)
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['executions'] }),
+  })
+}
+
+export function usePublicPendingExecutions() {
+  return useQuery({
+    queryKey: ['executions', 'public', 'pendente'],
+    queryFn: async (): Promise<MaintenanceExecution[]> => {
+      const { data, error } = await supabase
+        .from('maintenance_executions')
+        .select('*, plan:maintenance_plans(id,title,plan_type,template_fields,form_url), locality:localities(id,name), equipment:equipment(id,name,tag)')
+        .eq('status', 'pendente')
+        .order('scheduled_date', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as MaintenanceExecution[]
+    },
   })
 }
 
@@ -101,25 +152,8 @@ export function useAllExecutions() {
     queryFn: async (): Promise<MaintenanceExecution[]> => {
       let query = supabase
         .from('maintenance_executions')
-        .select('*, plan:maintenance_plans(id,title,plan_type), asset:assets(id,name,location)')
+        .select('*, plan:maintenance_plans(id,title,plan_type,template_fields), locality:localities(id,name), asset:assets(id,name,location), equipment:equipment(id,name,tag)')
         .order('created_at', { ascending: false })
-
-      if (profile?.role === 'contratada') {
-        const contractsRes = await supabase
-          .from('contracts')
-          .select('id')
-          .eq('contractor_profile_id', profile.id)
-        const contractIds = (contractsRes.data ?? []).map(c => c.id)
-        if (contractIds.length === 0) return []
-
-        const assetsRes = await supabase
-          .from('assets')
-          .select('id')
-          .in('contract_id', contractIds)
-        const ids = (assetsRes.data ?? []).map(a => a.id)
-        if (ids.length === 0) return []
-        query = query.in('asset_id', ids)
-      }
 
       const { data, error } = await query
       if (error) throw error

@@ -5,10 +5,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
   ChevronLeft, CheckCircle, XCircle, Clock, Eye,
-  ChevronDown, ChevronUp, User
+  ChevronDown, ChevronUp, User, FileText, StickyNote, Ban
 } from 'lucide-react'
 import { useExecution, useUpdateExecutionStatus } from '@/hooks/useExecutions'
 import { useExecutionHistory } from '@/hooks/useHistory'
+import { useFormMetadata, formKeyFromUrl } from '@/hooks/useFormMetadata'
 import { useAuth } from '@/hooks/useAuth'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -25,11 +26,37 @@ const FIELD_LABELS: Record<string, string> = {
   rejection_reason: 'Motivo de Rejeição',
 }
 
+/** Extrai operador e limite de uma string como "≥ 2 MΩ" ou "≤ 60 μΩ" */
+function parseRef(refStr: string): { op: string; limit: number } | null {
+  const m = refStr.match(/(≥|≤|>|<)\s*([\d.,]+)/)
+  if (!m) return null
+  return { op: m[1], limit: parseFloat(m[2].replace(',', '.')) }
+}
+
+/** Retorna 'ok', 'fail' ou null se não aplicável */
+function checkRef(refStr: string | undefined, value: unknown): 'ok' | 'fail' | null {
+  if (!refStr || typeof value !== 'number') return null
+  const p = parseRef(refStr)
+  if (!p) return null
+  if (p.op === '≥') return value >= p.limit ? 'ok' : 'fail'
+  if (p.op === '≤') return value <= p.limit ? 'ok' : 'fail'
+  if (p.op === '>')  return value >  p.limit ? 'ok' : 'fail'
+  if (p.op === '<')  return value <  p.limit ? 'ok' : 'fail'
+  return null
+}
+
+/** Formata uma chave técnica como label legível de fallback */
+function formatKey(key: string): string {
+  return key.replace(/_/g, ' ').replace(/\b(\w)/g, c => c.toUpperCase())
+}
+
 const STATUS_PT: Record<string, string> = {
-  pendente: 'Pendente',
+  pendente:   'Pendente',
+  recebido:   'Recebido',
   em_analise: 'Em Análise',
-  aprovado: 'Aprovado',
-  rejeitado: 'Rejeitado',
+  aprovado:   'Aprovado',
+  rejeitado:  'Rejeitado',
+  cancelado:  'Cancelado',
 }
 
 export function FormDetailPage() {
@@ -38,10 +65,14 @@ export function FormDetailPage() {
   const { profile } = useAuth()
   const [showHistory, setShowHistory] = useState(false)
   const [showRejectModal, setShowRejectModal] = useState(false)
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false)
+  const [internalNotes, setInternalNotes] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
 
   const { data: exec, isLoading } = useExecution(id ?? '')
   const { data: history } = useExecutionHistory(id ?? '')
+  const formKey = formKeyFromUrl(exec?.plan?.form_url)
+  const { data: formMeta } = useFormMetadata(formKey)
   const updateStatus = useUpdateExecutionStatus()
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<RejectForm>({
@@ -59,14 +90,20 @@ export function FormDetailPage() {
     return <div className="p-4 text-center text-gray-500">Formulário não encontrado.</div>
   }
 
-  const isFiscalizacao = profile?.role === 'fiscalizacao'
+  const canAnalyze = profile?.role === 'fiscalizacao' || profile?.role === 'admin' || profile?.role === 'gestor'
+  const canCancel = profile?.role === 'admin' || profile?.role === 'gestor'
   const isContratada = profile?.role === 'contratada'
 
   async function handleStartAnalysis() {
-    if (exec?.status !== 'pendente') return
+    if (!exec || exec.status !== 'recebido') return
     setActionLoading(true)
     try {
-      await updateStatus.mutateAsync({ id: exec.id, status: 'em_analise' })
+      await updateStatus.mutateAsync({
+        id: exec.id,
+        status: 'em_analise',
+        internal_notes: internalNotes || undefined,
+      })
+      setShowAnalysisModal(false)
     } finally {
       setActionLoading(false)
     }
@@ -135,14 +172,6 @@ export function FormDetailPage() {
           <p className="text-xs font-bold text-metro-navy uppercase tracking-wide mb-3">Identificação</p>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <p className="text-xs text-gray-400">Ativo</p>
-              <p className="font-medium text-metro-navy">{exec.asset?.name ?? '—'}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-400">Localidade</p>
-              <p className="font-medium text-metro-navy">{exec.asset?.location ?? '—'}</p>
-            </div>
-            <div>
               <p className="text-xs text-gray-400">Número da OS</p>
               <p className="font-medium text-metro-navy">{exec.os_number ?? '—'}</p>
             </div>
@@ -151,7 +180,21 @@ export function FormDetailPage() {
               <p className="font-medium text-metro-navy">{exec.psa_item ?? '—'}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400">Submetido em</p>
+              <p className="text-xs text-gray-400">Localidade</p>
+              <p className="font-medium text-metro-navy">
+                {exec.locality?.name ?? exec.asset?.location ?? '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">Data Programada</p>
+              <p className="font-medium text-metro-navy">
+                {exec.scheduled_date
+                  ? new Date(exec.scheduled_date + 'T00:00:00').toLocaleDateString('pt-BR')
+                  : '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">Criado em</p>
               <p className="font-medium text-metro-navy">{new Date(exec.created_at).toLocaleString('pt-BR')}</p>
             </div>
           </div>
@@ -184,17 +227,17 @@ export function FormDetailPage() {
           </div>
         )}
 
-        {/* Fiscalização actions */}
-        {isFiscalizacao && (
+        {/* Ações de análise */}
+        {canAnalyze && (
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <p className="text-xs font-bold text-metro-navy uppercase tracking-wide mb-3">Ações de Fiscalização</p>
+            <p className="text-xs font-bold text-metro-navy uppercase tracking-wide mb-3">Ações</p>
             <div className="flex gap-3 flex-wrap">
-              {exec.status === 'pendente' && (
-                <Button variant="secondary" onClick={handleStartAnalysis} loading={actionLoading} className="flex-1">
+              {exec.status === 'recebido' && (
+                <Button variant="secondary" onClick={() => { setInternalNotes(exec.internal_notes ?? ''); setShowAnalysisModal(true) }} className="flex-1">
                   <Eye size={15} /> Iniciar Análise
                 </Button>
               )}
-              {(exec.status === 'em_analise' || exec.status === 'pendente') && (
+              {exec.status === 'em_analise' && (
                 <>
                   <Button onClick={handleApprove} loading={actionLoading} className="flex-1 !bg-green-600 hover:!bg-green-700">
                     <CheckCircle size={15} /> Aprovar
@@ -203,6 +246,9 @@ export function FormDetailPage() {
                     <XCircle size={15} /> Rejeitar
                   </Button>
                 </>
+              )}
+              {exec.status === 'pendente' && (
+                <p className="text-sm text-gray-400">Aguardando preenchimento pelo operador de campo.</p>
               )}
               {exec.status === 'aprovado' && (
                 <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
@@ -214,7 +260,34 @@ export function FormDetailPage() {
                   <XCircle size={16} /> Aguardando correção da contratada
                 </div>
               )}
+              {exec.status === 'cancelado' && (
+                <div className="flex items-center gap-2 text-gray-400 text-sm font-medium">
+                  <Ban size={16} /> OS cancelada
+                </div>
+              )}
+              {/* Cancelar — disponível para admin/gestor enquanto não aprovado/cancelado */}
+              {canCancel && !['aprovado', 'cancelado'].includes(exec.status) && (
+                <Button
+                  variant="secondary"
+                  onClick={() => updateStatus.mutateAsync({ id: exec.id, status: 'cancelado' })}
+                  loading={actionLoading}
+                  className="ml-auto !text-gray-400 hover:!text-red-500"
+                >
+                  <Ban size={14} /> Cancelar OS
+                </Button>
+              )}
             </div>
+          </div>
+        )}
+
+        {/* Notas internas (visível apenas para quem pode analisar) */}
+        {canAnalyze && exec.internal_notes && exec.status !== 'recebido' && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <StickyNote size={13} className="text-amber-600" />
+              <p className="text-xs font-bold text-amber-700 uppercase tracking-wide">Notas Internas</p>
+            </div>
+            <p className="text-sm text-amber-900 whitespace-pre-wrap">{exec.internal_notes}</p>
           </div>
         )}
 
@@ -280,6 +353,166 @@ export function FormDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Modal: Iniciar Análise */}
+      <Modal
+        open={showAnalysisModal}
+        onClose={() => setShowAnalysisModal(false)}
+        title="Revisar Formulário — Iniciar Análise"
+      >
+        <div className="space-y-4">
+          {/* Form data */}
+          {(() => {
+            const fd = exec?.form_data ?? {}
+            const dataKeys = Object.keys(fd).filter(k => !k.startsWith('_'))
+            if (dataKeys.length === 0) return (
+              <div className="rounded-xl border border-gray-200 p-4 text-center text-sm text-gray-400">
+                Nenhum dado de formulário registrado nesta OS.
+              </div>
+            )
+
+            // Usa metadados da tabela form_field_metadata; fallback para _labels/_section salvos no form_data (OSs antigas)
+            const metaFields  = formMeta?.fields ?? []
+            const labels      = metaFields.length > 0
+              ? Object.fromEntries(metaFields.map(f => [f.key, f.label]))
+              : (fd._labels  as Record<string,string>) ?? {}
+            const sectionMap  = metaFields.length > 0
+              ? Object.fromEntries(metaFields.map(f => [f.key, f.section]))
+              : (fd._section as Record<string,string>) ?? {}
+            const unitMap     = Object.fromEntries(metaFields.map(f => [f.key, f.unit ?? ''])) as Record<string,string>
+            const refMap      = Object.fromEntries(metaFields.map(f => [f.key, f.ref  ?? ''])) as Record<string,string>
+            const executantes  = fd._executantes as { matricula?: string; inicio?: string; fim?: string }[] | undefined
+            const instrumentos = fd._instrumentos as { nome?: string; tag?: string }[] | undefined
+
+            const entries = Object.entries(fd).filter(([k, v]) => !k.startsWith('_') && v !== null && v !== '')
+            const groups: Record<string, [string, unknown][]> = {}
+            entries.forEach(([k, v]) => {
+              const sec = sectionMap[k] ?? 'Dados do Formulário'
+              if (!groups[sec]) groups[sec] = []
+              groups[sec].push([k, v])
+            })
+
+            return (
+              <div className="max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 text-sm">
+                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2 sticky top-0 z-10">
+                  <FileText size={13} className="text-gray-400" />
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Dados preenchidos pelo operador</span>
+                </div>
+
+                {Object.entries(groups).map(([sec, rows]) => (
+                  <div key={sec}>
+                    <div className="bg-metro-navy/5 px-3 py-1.5 border-y border-gray-100 sticky top-8 z-[9]">
+                      <span className="text-[11px] font-bold text-metro-navy uppercase tracking-wide">{sec}</span>
+                    </div>
+                    <div className="divide-y divide-gray-50">
+                      {rows.map(([key, value]) => {
+                        const label   = labels[key] || formatKey(key)
+                        const isBool  = value === 'Sim' || value === 'Não' || value === 'N/A'
+                        const refStr  = refMap[key]
+                        const unitVal = unitMap[key]
+                        const compliance = checkRef(refStr, value)
+                        const rowBg = compliance === 'fail' ? 'bg-red-50' : ''
+
+                        return (
+                          <div key={key} className={`flex items-start gap-3 px-3 py-2 ${rowBg}`}>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-700 leading-snug">{label}</p>
+                              {refStr && (
+                                <p className="text-[10px] text-gray-400 mt-0.5">
+                                  Ref: <span className="font-medium">{refStr}</span>
+                                </p>
+                              )}
+                            </div>
+
+                            {isBool ? (
+                              <span className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded-full ${
+                                value === 'Sim' ? 'bg-green-100 text-green-700' :
+                                value === 'Não' ? 'bg-red-100 text-red-700' :
+                                'bg-gray-100 text-gray-500'
+                              }`}>{String(value)}</span>
+                            ) : (
+                              <div className="shrink-0 flex items-center gap-1.5">
+                                {compliance === 'fail' && (
+                                  <span className="text-[10px] font-bold text-red-600 bg-red-100 px-1.5 py-0.5 rounded">
+                                    ⚠ Fora da faixa
+                                  </span>
+                                )}
+                                <span className={`text-xs font-semibold text-right ${
+                                  compliance === 'fail' ? 'text-red-700' :
+                                  compliance === 'ok'   ? 'text-green-700' :
+                                  'text-metro-navy'
+                                }`}>
+                                  {String(value)}{unitVal ? ` ${unitVal}` : ''}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+
+                {executantes && executantes.length > 0 && (
+                  <div>
+                    <div className="bg-metro-navy/5 px-3 py-1.5 border-y border-gray-100">
+                      <span className="text-[11px] font-bold text-metro-navy uppercase tracking-wide">Executantes</span>
+                    </div>
+                    {executantes.map((e, i) => (
+                      <div key={i} className="px-3 py-2 text-xs text-metro-navy border-b border-gray-50">
+                        <span className="font-semibold">{e.matricula ?? '—'}</span>
+                        {e.inicio && <span className="text-gray-400"> · início: {e.inicio}</span>}
+                        {e.fim    && <span className="text-gray-400"> · fim: {e.fim}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {instrumentos && instrumentos.length > 0 && (
+                  <div>
+                    <div className="bg-metro-navy/5 px-3 py-1.5 border-y border-gray-100">
+                      <span className="text-[11px] font-bold text-metro-navy uppercase tracking-wide">Instrumentos Utilizados</span>
+                    </div>
+                    {instrumentos.map((inst, idx) => (
+                      <div key={idx} className="px-3 py-2 flex items-center justify-between text-xs border-b border-gray-50">
+                        <span className="text-metro-navy">{inst.nome ?? '—'}</span>
+                        {inst.tag && <span className="text-gray-400 font-mono">{inst.tag}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
+          {/* Notas internas */}
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <StickyNote size={13} className="text-amber-500" />
+              <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                Notas Internas
+              </label>
+              <span className="text-[10px] text-gray-400">(não enviadas à contratada)</span>
+            </div>
+            <textarea
+              value={internalNotes}
+              onChange={e => setInternalNotes(e.target.value)}
+              rows={3}
+              placeholder="Registre observações internas sobre esta OS..."
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-metro-orange resize-none"
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <Button variant="secondary" onClick={() => setShowAnalysisModal(false)} className="flex-1">
+              Cancelar
+            </Button>
+            <Button onClick={handleStartAnalysis} loading={actionLoading} className="flex-1">
+              <Eye size={15} /> Confirmar Análise
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Reject modal */}
       <Modal

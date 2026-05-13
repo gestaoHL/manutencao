@@ -7,7 +7,7 @@ const STORAGE_KEY = 'metro_view_mode'
 function getInitialMode(): ViewMode {
   const stored = localStorage.getItem(STORAGE_KEY) as ViewMode | null
   if (stored) return stored
-  return window.innerWidth >= 1024 ? 'desktop' : 'mobile'
+  return 'desktop'
 }
 
 export function useViewMode() {

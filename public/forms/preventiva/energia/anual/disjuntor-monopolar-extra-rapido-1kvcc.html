@@ -529,10 +529,16 @@ function collectFormData() {
     const tag  = document.getElementById(`instr_${i}_tag`)?.value?.trim()
     if (nome) { data[`instr_${i}_nome`] = nome; data[`instr_${i}_tag`] = tag || null }
   }
-  // Salva labels e seções para exibição na revisão
-  const _labels = {}; const _section = {}
-  FORM_META.forEach(f => { _labels[f.key] = f.label; _section[f.key] = f.section })
-  data._labels = _labels; data._section = _section
+  // Salva labels, seções e referências para exibição na revisão
+  const _labels = {}; const _section = {}; const _refs = {}
+  FORM_META.forEach(f => {
+    _labels[f.key] = f.label; _section[f.key] = f.section
+    if (f.ref != null) {
+      const op = f.ref_dir === 'gte' ? '≥' : f.ref_dir === 'lte' ? '≤' : ''
+      _refs[f.key] = op ? `${op} ${f.ref}` : String(f.ref)
+    }
+  })
+  data._labels = _labels; data._section = _section; data._refs = _refs
 
   // Normaliza executantes para _executantes
   const _executantes = []

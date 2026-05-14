@@ -884,12 +884,17 @@ function collectFormData() {
   })
   d._instrumentos=instrumentos
 
-  // Salva labels e seções para exibição na revisão
-  const _labels = {}; const _section = {}
+  // Salva labels, seções e referências para exibição na revisão
+  const _labels = {}; const _section = {}; const _refs = {}
   FORM_META.sections.forEach(sec => {
-    sec.fields.forEach(f => { _labels[f.key] = f.label; _section[f.key] = sec.title })
+    const refMatch = sec.title.match(/(≥|≤|>|<)\s*([\d.,]+)\s*([^\s)]+)?/)
+    const ref = refMatch ? `${refMatch[1]} ${refMatch[2]}${refMatch[3] ? ' ' + refMatch[3] : ''}`.trim() : null
+    sec.fields.forEach(f => {
+      _labels[f.key] = f.label; _section[f.key] = sec.title
+      if (f.type !== 'bool' && ref) _refs[f.key] = ref
+    })
   })
-  d._labels = _labels; d._section = _section
+  d._labels = _labels; d._section = _section; d._refs = _refs
 
   return d
 }

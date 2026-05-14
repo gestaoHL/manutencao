@@ -28,22 +28,25 @@ const FIELD_LABELS: Record<string, string> = {
   rejection_reason: 'Motivo de Rejeição',
 }
 
-/** Extrai operador e limite de uma string como "≥ 2 MΩ" ou "≤ 60 μΩ" */
+/** Extrai operador e limite de uma string como "≥ 2 MΩ", "≤ 60 μΩ" ou ">= 2 MΩ" */
 function parseRef(refStr: string): { op: string; limit: number } | null {
-  const m = refStr.match(/(≥|≤|>|<)\s*([\d.,]+)/)
+  const m = refStr.match(/(>=|<=|≥|≤|>|<)\s*([\d.,]+)/)
   if (!m) return null
-  return { op: m[1], limit: parseFloat(m[2].replace(',', '.')) }
+  const op = m[1] === '>=' ? '≥' : m[1] === '<=' ? '≤' : m[1]
+  return { op, limit: parseFloat(m[2].replace(',', '.')) }
 }
 
 /** Retorna 'ok', 'fail' ou null se não aplicável */
 function checkRef(refStr: string | undefined, value: unknown): 'ok' | 'fail' | null {
-  if (!refStr || typeof value !== 'number') return null
+  if (!refStr) return null
+  const num = typeof value === 'number' ? value : typeof value === 'string' ? parseFloat(value) : NaN
+  if (isNaN(num)) return null
   const p = parseRef(refStr)
   if (!p) return null
-  if (p.op === '≥') return value >= p.limit ? 'ok' : 'fail'
-  if (p.op === '≤') return value <= p.limit ? 'ok' : 'fail'
-  if (p.op === '>')  return value >  p.limit ? 'ok' : 'fail'
-  if (p.op === '<')  return value <  p.limit ? 'ok' : 'fail'
+  if (p.op === '≥') return num >= p.limit ? 'ok' : 'fail'
+  if (p.op === '≤') return num <= p.limit ? 'ok' : 'fail'
+  if (p.op === '>')  return num >  p.limit ? 'ok' : 'fail'
+  if (p.op === '<')  return num <  p.limit ? 'ok' : 'fail'
   return null
 }
 
@@ -125,9 +128,20 @@ export function FormDetailPage() {
     // 2. Verificar parâmetros fora da referência
     const metaFields = formMeta?.fields ?? []
     const savedLabels = (fd._labels as Record<string, string> | undefined) ?? {}
+    const savedRefs   = (fd._refs   as Record<string, string> | undefined) ?? {}
     const params: ParamCheck[] = []
-    for (const field of metaFields) {
-      if (!field.ref) continue
+
+    // Usa metadados da tabela quando disponível; caso contrário usa _refs salvo no form_data
+    const fieldsToCheck = metaFields.length > 0
+      ? metaFields.filter(f => !!f.ref).map(f => ({ key: f.key, ref: f.ref!, label: f.label, unit: f.unit ?? '' }))
+      : Object.entries(savedRefs).map(([key, ref]) => ({
+          key,
+          ref,
+          label: savedLabels[key] || formatKey(key),
+          unit: '',
+        }))
+
+    for (const field of fieldsToCheck) {
       const value = fd[field.key]
       if (value === undefined || value === null || value === '') continue
       const check = checkRef(field.ref, value)
@@ -137,7 +151,7 @@ export function FormDetailPage() {
           key: field.key,
           value,
           ref: field.ref,
-          unit: field.unit ?? '',
+          unit: field.unit,
           result: check,
         })
       }

@@ -107,7 +107,10 @@ export function FormDetailPage() {
     const fd = exec.form_data ?? {}
 
     // 1. Verificar executantes
-    const executantesRaw = (fd._executantes as { matricula?: string; nome?: string }[] | undefined) ?? []
+    const executantesRaw = (
+      (fd._executantes as { matricula?: string; nome?: string }[] | undefined) ??
+      (fd.executantes  as { matricula?: string; nome?: string }[] | undefined) ?? []
+    )
     const executantes: ExecutanteCheck[] = executantesRaw.map(e => {
       const mat = (e.matricula ?? '').trim()
       const found = allEmployees.find(emp => emp.matricula.trim() === mat)
@@ -121,6 +124,7 @@ export function FormDetailPage() {
 
     // 2. Verificar parâmetros fora da referência
     const metaFields = formMeta?.fields ?? []
+    const savedLabels = (fd._labels as Record<string, string> | undefined) ?? {}
     const params: ParamCheck[] = []
     for (const field of metaFields) {
       if (!field.ref) continue
@@ -129,7 +133,7 @@ export function FormDetailPage() {
       const check = checkRef(field.ref, value)
       if (check !== null) {
         params.push({
-          label: field.label,
+          label: savedLabels[field.key] || field.label,
           key: field.key,
           value,
           ref: field.ref,

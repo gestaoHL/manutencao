@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -883,6 +883,13 @@ function collectFormData() {
     if(nome||tag) instrumentos.push({nome,tag})
   })
   d._instrumentos=instrumentos
+
+  // Salva labels e seções para exibição na revisão
+  const _labels = {}; const _section = {}
+  FORM_META.sections.forEach(sec => {
+    sec.fields.forEach(f => { _labels[f.key] = f.label; _section[f.key] = sec.title })
+  })
+  d._labels = _labels; d._section = _section
 
   return d
 }

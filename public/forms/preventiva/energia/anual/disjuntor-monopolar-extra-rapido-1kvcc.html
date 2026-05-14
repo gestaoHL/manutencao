@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -529,6 +529,19 @@ function collectFormData() {
     const tag  = document.getElementById(`instr_${i}_tag`)?.value?.trim()
     if (nome) { data[`instr_${i}_nome`] = nome; data[`instr_${i}_tag`] = tag || null }
   }
+  // Salva labels e seções para exibição na revisão
+  const _labels = {}; const _section = {}
+  FORM_META.forEach(f => { _labels[f.key] = f.label; _section[f.key] = f.section })
+  data._labels = _labels; data._section = _section
+
+  // Normaliza executantes para _executantes
+  const _executantes = []
+  for (let n = 1; n <= execCount; n++) {
+    const mat = data[`exec_${n}_matricula`]
+    if (mat) _executantes.push({ matricula: mat, inicio: data[`exec_${n}_inicio`], fim: data[`exec_${n}_fim`] })
+  }
+  data._executantes = _executantes
+
   return data
 }
 

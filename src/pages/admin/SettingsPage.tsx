@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Trash2, Edit2, Cpu, MapPin, Clock, Building2, Layers, FileCode } from 'lucide-react'
+import { Plus, Trash2, Edit2, Cpu, MapPin, Clock, Building2, Layers, FileCode, Users } from 'lucide-react'
+import { useEmployees, useCreateEmployee, useUpdateEmployee, useDeleteEmployee } from '@/hooks/useEmployees'
+import type { Employee } from '@/hooks/useEmployees'
 import { ExcelUpload } from '@/components/ui/ExcelUpload'
 import { supabase } from '@/lib/supabase'
 import {
@@ -669,7 +671,109 @@ function FormsCatalogTab() {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-type Tab = 'companies' | 'equipment' | 'localities' | 'periodicities' | 'sistemas' | 'forms'
+// ─── Employees tab ────────────────────────────────────────────────────────────
+
+const employeeSchema = z.object({
+  company_id: z.string().uuid('Selecione a empresa'),
+  nome:       z.string().min(2, 'Nome obrigatório'),
+  matricula:  z.string().min(1, 'Matrícula obrigatória'),
+  funcao:     z.string().optional(),
+  status:     z.enum(['ativo', 'inativo']),
+})
+type EmployeeForm = z.infer<typeof employeeSchema>
+
+function EmployeesTab() {
+  const { data: companies = [] } = useCompanies()
+  const [companyFilter, setCompanyFilter] = useState('')
+  const { data: employees = [], isLoading } = useEmployees(companyFilter || undefined)
+  const createEmployee = useCreateEmployee()
+  const updateEmployee = useUpdateEmployee()
+  const deleteEmployee = useDeleteEmployee()
+
+  const [showForm, setShowForm] = useState(false)
+  const [editing, setEditing] = useState<Employee | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const companyOptions = companies.map(c => ({ value: c.id, label: c.name }))
+  const statusOptions = [
+    { value: 'ativo',   label: 'Ativo' },
+    { value: 'inativo', label: 'Inativo' },
+  ]
+
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<EmployeeForm>({
+    resolver: zodResolver(employeeSchema),
+    defaultValues: { status: 'ativo' },
+  })
+
+  function openCreate() { reset({ status: 'ativo', company_id: companyFilter || '' }); setEditing(null); setShowForm(true) }
+  function openEdit(e: Employee) {
+    reset({ company_id: e.company_id, nome: e.nome, matricula: e.matricula, funcao: e.funcao ?? '', status: e.status })
+    setEditing(e)
+    setShowForm(true)
+  }
+
+  async function onSubmit(data: EmployeeForm) {
+    if (editing) await updateEmployee.mutateAsync({ id: editing.id, ...data })
+    else await createEmployee.mutateAsync(data)
+    setShowForm(false)
+  }
+
+  async function onDelete(id: string) {
+    setDeletingId(id)
+    await deleteEmployee.mutateAsync(id)
+    setDeletingId(null)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-bold text-metro-navy uppercase tracking-wide">Empregados da Contratada</p>
+        <Button size="sm" onClick={openCreate}><Plus size={13} /> Novo</Button>
+      </div>
+
+      <Select
+        label="Filtrar por empresa"
+        options={[{ value: '', label: 'Todas as empresas' }, ...companyOptions]}
+        {...{ value: companyFilter, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setCompanyFilter(e.target.value) }}
+      />
+
+      {isLoading ? <Spinner /> : employees.length === 0 ? (
+        <p className="text-sm text-gray-400 text-center py-4">Nenhum empregado cadastrado.</p>
+      ) : (
+        <div className="divide-y divide-gray-50">
+          {employees.map(emp => (
+            <ItemRow
+              key={emp.id}
+              primary={`${emp.nome} — ${emp.matricula}`}
+              secondary={`${emp.company?.name ?? ''}${emp.funcao ? ` · ${emp.funcao}` : ''} · ${emp.status === 'ativo' ? '✅ Ativo' : '🔴 Inativo'}`}
+              onEdit={() => openEdit(emp)}
+              onDelete={() => onDelete(emp.id)}
+              deleting={deletingId === emp.id}
+            />
+          ))}
+        </div>
+      )}
+
+      <Modal open={showForm} onClose={() => setShowForm(false)} title={editing ? 'Editar Empregado' : 'Novo Empregado'}>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+          <Select label="Empresa *" options={companyOptions} placeholder="Selecione" error={errors.company_id?.message} {...register('company_id')} />
+          <Input label="Nome completo *" error={errors.nome?.message} {...register('nome')} />
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Matrícula *" placeholder="Ex: 0012345" error={errors.matricula?.message} {...register('matricula')} />
+            <Input label="Função" placeholder="Ex: Eletricista" {...register('funcao')} />
+          </div>
+          <Select label="Status" options={statusOptions} {...register('status')} />
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="secondary" onClick={() => setShowForm(false)} className="flex-1">Cancelar</Button>
+            <Button type="submit" loading={isSubmitting} className="flex-1">{editing ? 'Salvar' : 'Cadastrar'}</Button>
+          </div>
+        </form>
+      </Modal>
+    </div>
+  )
+}
+
+type Tab = 'companies' | 'equipment' | 'localities' | 'periodicities' | 'sistemas' | 'forms' | 'employees'
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'companies',     label: 'Empresas',       icon: Building2 },
@@ -678,6 +782,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'periodicities', label: 'Periodicidades', icon: Clock },
   { id: 'sistemas',      label: 'Sistemas',       icon: Layers },
   { id: 'forms',         label: 'Formulários',    icon: FileCode },
+  { id: 'employees',     label: 'Empregados',     icon: Users },
 ]
 
 export function SettingsPage() {
@@ -721,6 +826,7 @@ export function SettingsPage() {
           {active === 'periodicities' && <PeriodicitiesTab />}
           {active === 'sistemas'      && <SistemasTab />}
           {active === 'forms'         && <FormsCatalogTab />}
+          {active === 'employees'     && <EmployeesTab />}
         </div>
       </div>
     </div>

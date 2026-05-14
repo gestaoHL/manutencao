@@ -5,11 +5,13 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
   ChevronLeft, CheckCircle, XCircle, Clock, Eye,
-  ChevronDown, ChevronUp, User, FileText, StickyNote, Ban, ExternalLink
+  ChevronDown, ChevronUp, User, FileText, StickyNote, Ban, ExternalLink,
+  FlaskConical, AlertTriangle, ShieldCheck, ShieldX
 } from 'lucide-react'
 import { useExecution, useUpdateExecutionStatus } from '@/hooks/useExecutions'
 import { useExecutionHistory } from '@/hooks/useHistory'
 import { useFormMetadata, formKeyFromUrl as formKeyFromPath } from '@/hooks/useFormMetadata'
+import { useEmployees } from '@/hooks/useEmployees'
 import { useAuth } from '@/hooks/useAuth'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -59,6 +61,29 @@ const STATUS_PT: Record<string, string> = {
   cancelado:  'Cancelado',
 }
 
+interface ExecutanteCheck {
+  matricula: string
+  nome_informado?: string
+  found: boolean
+  ativo: boolean
+}
+
+interface ParamCheck {
+  label: string
+  key: string
+  value: unknown
+  ref: string
+  unit: string
+  result: 'ok' | 'fail'
+}
+
+interface AnalysisResult {
+  executantes: ExecutanteCheck[]
+  params: ParamCheck[]
+  allExecutantesOk: boolean
+  allParamsOk: boolean
+}
+
 export function FormDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -74,6 +99,53 @@ export function FormDetailPage() {
   const formKey = formKeyFromPath(exec?.plan?.forms_catalog?.path)
   const { data: formMeta } = useFormMetadata(formKey)
   const updateStatus = useUpdateExecutionStatus()
+  const { data: allEmployees = [] } = useEmployees(exec?.company_id ?? undefined)
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null)
+
+  function runAnalysis() {
+    if (!exec) return
+    const fd = exec.form_data ?? {}
+
+    // 1. Verificar executantes
+    const executantesRaw = (fd._executantes as { matricula?: string; nome?: string }[] | undefined) ?? []
+    const executantes: ExecutanteCheck[] = executantesRaw.map(e => {
+      const mat = (e.matricula ?? '').trim()
+      const found = allEmployees.find(emp => emp.matricula.trim() === mat)
+      return {
+        matricula: mat || '—',
+        nome_informado: e.nome,
+        found: !!found,
+        ativo: found?.status === 'ativo',
+      }
+    })
+
+    // 2. Verificar parâmetros fora da referência
+    const metaFields = formMeta?.fields ?? []
+    const params: ParamCheck[] = []
+    for (const field of metaFields) {
+      if (!field.ref) continue
+      const value = fd[field.key]
+      if (value === undefined || value === null || value === '') continue
+      const check = checkRef(field.ref, value)
+      if (check !== null) {
+        params.push({
+          label: field.label,
+          key: field.key,
+          value,
+          ref: field.ref,
+          unit: field.unit ?? '',
+          result: check,
+        })
+      }
+    }
+
+    setAnalysisResult({
+      executantes,
+      params,
+      allExecutantesOk: executantes.every(e => e.found && e.ativo),
+      allParamsOk: params.every(p => p.result === 'ok'),
+    })
+  }
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<RejectForm>({
     resolver: zodResolver(rejectSchema),
@@ -253,6 +325,92 @@ export function FormDetailPage() {
           </div>
         )}
 
+        {/* Resultado da análise */}
+        {analysisResult && (
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-4">
+            <div className="flex items-center gap-2">
+              <FlaskConical size={14} className="text-metro-navy" />
+              <p className="text-xs font-bold text-metro-navy uppercase tracking-wide">Resultado da Análise Automática</p>
+            </div>
+
+            {/* Executantes */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                {analysisResult.allExecutantesOk
+                  ? <ShieldCheck size={13} className="text-green-600" />
+                  : <ShieldX size={13} className="text-red-500" />
+                }
+                <p className="text-xs font-semibold text-gray-700">Executantes</p>
+              </div>
+              {analysisResult.executantes.length === 0 ? (
+                <p className="text-xs text-gray-400 pl-4">Nenhum executante informado no formulário.</p>
+              ) : (
+                <div className="space-y-1.5 pl-2">
+                  {analysisResult.executantes.map((e, i) => (
+                    <div key={i} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${
+                      e.found && e.ativo ? 'bg-green-50 border border-green-100' : 'bg-red-50 border border-red-100'
+                    }`}>
+                      {e.found && e.ativo
+                        ? <CheckCircle size={12} className="text-green-600 shrink-0" />
+                        : <XCircle size={12} className="text-red-500 shrink-0" />
+                      }
+                      <span className="font-mono font-semibold text-gray-700">{e.matricula}</span>
+                      {e.nome_informado && <span className="text-gray-500">— {e.nome_informado}</span>}
+                      <span className={`ml-auto font-semibold ${e.found && e.ativo ? 'text-green-600' : 'text-red-500'}`}>
+                        {!e.found ? 'Não cadastrado' : !e.ativo ? 'Inativo' : 'Autorizado'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Parâmetros */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                {analysisResult.allParamsOk
+                  ? <ShieldCheck size={13} className="text-green-600" />
+                  : <AlertTriangle size={13} className="text-amber-500" />
+                }
+                <p className="text-xs font-semibold text-gray-700">Parâmetros com Referência</p>
+              </div>
+              {analysisResult.params.length === 0 ? (
+                <p className="text-xs text-gray-400 pl-4">Nenhum parâmetro com referência encontrado.</p>
+              ) : (
+                <div className="space-y-1.5 pl-2">
+                  {analysisResult.params.map((p, i) => (
+                    <div key={i} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${
+                      p.result === 'ok' ? 'bg-green-50 border border-green-100' : 'bg-red-50 border border-red-100'
+                    }`}>
+                      {p.result === 'ok'
+                        ? <CheckCircle size={12} className="text-green-600 shrink-0" />
+                        : <XCircle size={12} className="text-red-500 shrink-0" />
+                      }
+                      <span className="flex-1 text-gray-700">{p.label}</span>
+                      <span className={`font-semibold ${p.result === 'ok' ? 'text-green-700' : 'text-red-700'}`}>
+                        {String(p.value)}{p.unit ? ` ${p.unit}` : ''}
+                      </span>
+                      <span className="text-gray-400">({p.ref})</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Resumo */}
+            <div className={`rounded-xl px-4 py-3 text-sm font-semibold flex items-center gap-2 ${
+              analysisResult.allExecutantesOk && analysisResult.allParamsOk
+                ? 'bg-green-50 text-green-700 border border-green-200'
+                : 'bg-red-50 text-red-700 border border-red-200'
+            }`}>
+              {analysisResult.allExecutantesOk && analysisResult.allParamsOk
+                ? <><CheckCircle size={15} /> Todos os critérios atendidos — OS apta para aprovação.</>
+                : <><XCircle size={15} /> Foram encontradas divergências — revisar antes de aprovar.</>
+              }
+            </div>
+          </div>
+        )}
+
         {/* Ações de análise */}
         {canAnalyze && (
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
@@ -265,6 +423,13 @@ export function FormDetailPage() {
               )}
               {exec.status === 'em_analise' && (
                 <>
+                  <Button
+                    variant="secondary"
+                    onClick={runAnalysis}
+                    className="flex-1 !border-metro-navy !text-metro-navy hover:!bg-metro-navy hover:!text-white"
+                  >
+                    <FlaskConical size={15} /> Analisar
+                  </Button>
                   <Button onClick={handleApprove} loading={actionLoading} className="flex-1 !bg-green-600 hover:!bg-green-700">
                     <CheckCircle size={15} /> Aprovar
                   </Button>
